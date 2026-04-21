@@ -1,0 +1,127 @@
+/* * Project: Fahim-BotOS v1.0
+ * Company: My Gadget BD
+ * Hardware: ESP32-C3, SSD1306 OLED, MPU6050
+ */
+
+#include <WiFi.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_MPU6050.h>
+#include <ArduinoOTA.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+
+// --- পিন কনফিগারেশন ---
+#define TOUCH_L 2
+#define TOUCH_R 3
+#define VOICE_TRIGGER 10
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+// গ্লোবাল অবজেক্টস
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Adafruit_MPU6050 mpu;
+
+// রোবট মুড কন্ট্রোল
+enum RobotMood { IDLE, ANGRY, DIZZY };
+RobotMood currentMood = IDLE;
+
+// --- ১. ডিসপ্লে ক্লাস ---
+class DisplayManager {
+public:
+    void init() {
+        if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) return;
+        display.clearDisplay();
+        display.display();
+    }
+
+    void drawEyes(int h, bool isAngry = false) {
+        display.clearDisplay();
+        if (isAngry) {
+            display.fillTriangle(20, 20, 50, 40, 20, 40, WHITE);
+            display.fillTriangle(108, 20, 78, 40, 108, 40, WHITE);
+        } else {
+            display.fillRoundRect(25, 32 - h/2, 30, h, 15, WHITE);
+            display.fillRoundRect(73, 32 - h/2, 30, h, 15, WHITE);
+        }
+        display.display();
+    }
+};
+
+DisplayManager botUI;
+
+// --- ২. ইন্টারঅ্যাকশন টাস্ক (চোখের এনিমেশন ও ভয়েস) ---
+void taskInteraction(void *pvParameters) {
+    for(;;) {
+        if (currentMood == ANGRY) {
+            digitalWrite(VOICE_TRIGGER, HIGH);
+            for(int i=0; i<10; i++) {
+                botUI.drawEyes(30, true);
+                vTaskDelay(50 / portTICK_PERIOD_MS);
+            }
+            digitalWrite(VOICE_TRIGGER, LOW);
+            currentMood = IDLE;
+        } 
+        else if (currentMood == DIZZY) {
+            for(int i=0; i<5; i++) {
+                botUI.drawEyes(10); vTaskDelay(100 / portTICK_PERIOD_MS);
+                botUI.drawEyes(30); vTaskDelay(100 / portTICK_PERIOD_MS);
+            }
+            currentMood = IDLE;
+        }
+        else {
+            botUI.drawEyes(30); vTaskDelay(2000 / portTICK_PERIOD_MS);
+            botUI.drawEyes(2);  vTaskDelay(150 / portTICK_PERIOD_MS);
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+}
+
+// --- ৩. সেন্সর টাস্ক (টাচ ও জাইরো মনিটর) ---
+void taskSensors(void *pvParameters) {
+    for(;;) {
+        bool tL = digitalRead(TOUCH_L);
+        bool tR = digitalRead(TOUCH_R);
+        sensors_event_t a, g, temp;
+        mpu.getEvent(&a, &g, &temp);
+
+        if (tL && tR) currentMood = ANGRY;
+        else if (abs(g.gyro.x) > 2.5 || abs(g.gyro.y) > 2.5) currentMood = DIZZY;
+
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
+}
+
+// --- ৪. সিস্টেম ও ওটিএ আপডেট টাস্ক ---
+void taskSystem(void *pvParameters) {
+    WiFi.begin("Your_SSID", "Your_Password"); // আপনার ওয়াইফাই নাম ও পাসওয়ার্ড দিন
+    while (WiFi.status() != WL_CONNECTED) vTaskDelay(1000 / portTICK_PERIOD_MS);
+    
+    ArduinoOTA.setHostname("Fahim-Bot-01");
+    ArduinoOTA.begin();
+    
+    for(;;) {
+        ArduinoOTA.handle();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(VOICE_TRIGGER, OUTPUT);
+    pinMode(TOUCH_L, INPUT);
+    pinMode(TOUCH_R, INPUT);
+
+    botUI.init();
+    if (!mpu.begin()) Serial.println("MPU6050 missing!");
+
+    // FreeRTOS টাস্ক তৈরি
+    xTaskCreate(taskInteraction, "Interaction", 4096, NULL, 3, NULL);
+    xTaskCreate(taskSensors, "Sensors", 4096, NULL, 2, NULL);
+    xTaskCreate(taskSystem, "System", 4096, NULL, 1, NULL);
+}
+
+void loop() {
+    // লুপ খালি থাকবে
+}
