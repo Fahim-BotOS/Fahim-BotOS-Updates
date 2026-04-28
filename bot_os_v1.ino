@@ -1,3 +1,5 @@
+#include <HTTPUpdate.h>
+const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
