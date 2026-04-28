@@ -3,17 +3,17 @@ name: Build ESP32-C3 Firmware
 on:
   push:
     branches:
-      - main  # যখনই মেইন ব্রাঞ্চে পরিবর্তন হবে এটি কাজ করবে
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # ভার্সন আপডেট করা হয়েছে
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # ভার্সন আপডেট করা হয়েছে
         with:
           python-version: '3.9'
 
@@ -26,7 +26,7 @@ jobs:
         run: pio run
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # এটিই মূল সমস্যা ছিল, এখন ঠিক করা হয়েছে
         with:
           name: firmware
           path: .pio/build/esp32-c3-devkitm-1/firmware.bin
