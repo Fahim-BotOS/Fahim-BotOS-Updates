@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  # ভার্সন আপডেট করা হয়েছে
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # ভার্সন আপডেট করা হয়েছে
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
@@ -22,11 +22,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
+      - name: Move File for Build
+        run: |
+          mkdir -p src
+          cp *.ino src/main.cpp || cp *.cpp src/main.cpp
+          # এটি আপনার .ino ফাইলকে স্বয়ংক্রিয়ভাবে কম্পাইলযোগ্য করে তুলবে
+
       - name: Run PlatformIO Build
         run: pio run
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4 # এটিই মূল সমস্যা ছিল, এখন ঠিক করা হয়েছে
+        uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: .pio/build/esp32-c3-devkitm-1/firmware.bin
+
