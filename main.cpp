@@ -1,6 +1,4 @@
 #include <HTTPUpdate.h>
-const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
-
 #include <Arduino.h>
 #include <HTTPUpdate.h>
 
