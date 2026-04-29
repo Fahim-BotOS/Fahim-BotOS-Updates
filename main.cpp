@@ -456,24 +456,70 @@ void drawMood(int mood) {
   }
 }
 
+
 void expressionSkeptical() {
-  display.fillCircle(40, 30, 10, WHITE); display.fillCircle(40, 30, 4, BLACK);
-  display.fillCircle(88, 25, 12, WHITE); display.fillCircle(88, 25, 5, BLACK);
-  display.fillCircle(64, 50, 8, WHITE);  display.fillCircle(64, 50, 5, BLACK);
+  display.clearDisplay();
+
+  // ১. বাম চোখ (একটু বড় এবং সন্দেহজনকভাবে তাকিয়ে থাকা)
+  display.fillRoundRect(25, 25, 30, 25, 8, WHITE);
+  // মণি - যা ডানে এবং বামে হালকা নড়াচড়া করবে (সন্দেহ করার মতো)
+  int lookOffset = (millis() / 1000) % 2 == 0 ? 2 : -2; 
+  display.fillCircle(40 + lookOffset, 37, 5, BLACK); 
+
+  // ২. ডান চোখ (সরু বা ছোট করা চোখ - এটিই স্কেপটিক্যাল লুক দেয়)
+  // চোখটি একটু উপরে উঠানো থাকবে
+  display.fillRoundRect(73, 20, 30, 15, 4, WHITE);
+  display.fillCircle(88 + lookOffset, 27, 4, BLACK);
+
+  // ৩. সন্দেহজনক মুখ (একটি বাঁকা লাইন যা কাঁপবে)
+  int mouthWiggle = (millis() % 200 > 100) ? 1 : 0;
+  display.drawLine(54, 52 + mouthWiggle, 74, 52 - mouthWiggle, WHITE);
+  
+  // ৪. একটি ছোট্ট ঘাম বা দুশ্চিন্তার বিন্দু (Sweat drop) - যা কিউটনেস বাড়াবে
+  if ((millis() / 2000) % 2 == 0) {
+    display.fillCircle(110, 15, 2, WHITE);
+    display.drawLine(110, 13, 110, 10, WHITE);
+  }
+
+  display.display();
 }
 
+
 void expressionDizzy() {
-  display.drawCircle(40, 35, 15, WHITE); display.drawCircle(88, 35, 15, WHITE);
-  float angle = millis() * 0.01; 
+  display.clearDisplay();
+  
+  // ১. কিউট ঘোরানো চোখ (Spiral Eyes)
+  float angle = millis() * 0.008; // ঘোরার গতি একটু কমিয়ে স্মুথ করা হয়েছে
+  
   for (int i = 0; i < 2; i++) {
-    int centerX = (i == 0) ? 40 : 88;
-    for (int r = 2; r < 12; r += 4) {
-      int xOffset = r * cos(angle + r); int yOffset = r * sin(angle + r);
-      display.drawCircle(centerX + xOffset, 35 + yOffset, 2, WHITE);
+    int centerX = (i == 0) ? 40 : 88; // দুই চোখের সেন্টার
+    
+    // চোখের বাইরের মণি (আগের চেয়ে কিউট শেপ)
+    display.drawRoundRect(centerX - 15, 20, 30, 30, 10, WHITE); 
+    
+    // ভেতরের স্পাইরাল এনিমেশন
+    for (int r = 3; r < 12; r += 3) {
+      int xOffset = (r-1) * cos(angle + r);
+      int yOffset = (r-1) * sin(angle + r);
+      display.drawPixel(centerX + xOffset, 35 + yOffset, WHITE);
+      display.drawCircle(centerX + xOffset, 35 + yOffset, 1, WHITE);
     }
   }
-  display.drawEllipse(64, 55, 10, 6, WHITE); 
+
+  // ২. মাথার ওপর ঘোরানো তারা (Dizzy Stars) - এটি প্রফেশনাল লুক দেবে
+  int starX = 64 + 20 * cos(millis() * 0.005);
+  int starY = 10 + 5 * sin(millis() * 0.005);
+  display.setCursor(starX, starY);
+  display.print("*");
+  display.setCursor(128 - starX, starY + 2);
+  display.print(".");
+
+  // ৩. মুখ (ছোট্ট গোল হাঁ করা মুখ - যা দেখতে কিউট)
+  display.drawCircle(64, 56, 4, WHITE); 
+  
+  display.display();
 }
+
 
 void expressionSleepy() {
   display.fillRoundRect(25, 40, 30, 8, 4, WHITE); display.fillRoundRect(73, 40, 30, 8, 4, WHITE);
@@ -502,18 +548,74 @@ void expressionNormal() {
 }
 
 void expressionSad() {
-  display.fillRoundRect(45, 20, 10, 22, 5, WHITE); display.fillRoundRect(73, 20, 10, 22, 5, WHITE);
-  display.drawCircleHelper(64, 60, 15, 1, WHITE); display.drawCircleHelper(64, 60, 15, 2, WHITE); 
+  display.clearDisplay();
+  
+  // ১. দুঃখিত ভ্রু (Sad Eyebrows) - যা কিউটনেস বাড়াবে
+  display.drawLine(25, 15, 45, 22, WHITE); // বাম ভ্রু
+  display.drawLine(103, 15, 83, 22, WHITE); // ডান ভ্রু
+
+  // ২. চোখ (মণি নিচের দিকে নামানো)
+  // আপনার আগের স্থানাঙ্ক অনুযায়ী
+  display.fillRoundRect(25, 25, 30, 25, 8, WHITE); // বাম চোখ
+  display.fillRoundRect(73, 25, 30, 25, 8, WHITE); // ডান চোখ
+  
+  // মণি (নিচের দিকে তাকিয়ে থাকা)
+  display.fillCircle(40, 42, 4, BLACK); 
+  display.fillCircle(88, 42, 4, BLACK);
+
+  // ৩. চোখের জল (Tear Drop) - এটি প্রফেশনাল লুক দেবে
+  static int tearY = 45;
+  display.fillTriangle(30, tearY, 34, tearY, 32, tearY - 4, WHITE);
+  display.fillCircle(32, tearY + 2, 2, WHITE);
+  
+  tearY++; // চোখের জল নিচে পড়বে
+  if (tearY > 60) tearY = 45;
+
+  // ৪. মুখ (উল্টো বাঁকানো ছোট মুখ)
+  display.drawCircleHelper(64, 62, 10, 1, WHITE); 
+  display.drawCircleHelper(64, 62, 10, 2, WHITE); 
+
+  display.display();
 }
 
+
 void expressionLove() {
-  int s = ((millis() / 500) % 2) * 2; 
-  display.fillCircle(32, 28, 7 + s, WHITE); display.fillCircle(47, 28, 7 + s, WHITE);
-  display.fillTriangle(25 - s, 32, 54 + s, 32, 40, 50 + s, WHITE);
-  display.fillCircle(80, 28, 7 + s, WHITE); display.fillCircle(95, 28, 7 + s, WHITE);
-  display.fillTriangle(73 - s, 32, 102 + s, 32, 88, 50 + s, WHITE);
-  display.drawCircleHelper(64, 45, 8, 2, WHITE); 
+  display.clearDisplay();
+  
+  // ১. স্মুথ পালসিং ক্যালকুলেশন (sine wave ব্যবহার করে)
+  // এটি হার্টের স্পন্দনকে খুব স্মুথ এবং প্রফেশনাল করে তুলবে
+  float pulse = sin(millis() * 0.005) * 3; 
+  int s = (int)pulse;
+
+  // ২. বাম পাশের হার্ট (বাম চোখ)
+  display.fillCircle(32, 28, 8 + s, WHITE); 
+  display.fillCircle(48, 28, 8 + s, WHITE);
+  display.fillTriangle(24 - s, 32, 56 + s, 32, 40, 52 + s, WHITE);
+
+  // ৩. ডান পাশের হার্ট (ডান চোখ)
+  display.fillCircle(80, 28, 8 + s, WHITE); 
+  display.fillCircle(96, 28, 8 + s, WHITE);
+  display.fillTriangle(72 - s, 32, 104 + s, 32, 88, 52 + s, WHITE);
+
+  // ৪. ফ্লোটিং হার্ট এনিমেশন (ছোট ছোট হার্ট উপরে উড়ে যাবে)
+  static int heartY = 20;
+  static int heartX = 64;
+  display.drawPixel(heartX, heartY, WHITE);
+  display.drawPixel(heartX-1, heartY-1, WHITE);
+  display.drawPixel(heartX+1, heartY-1, WHITE);
+  
+  heartY--; // হার্ট উপরে উঠবে
+  if (heartY < 0) {
+    heartY = 30;
+    heartX = random(40, 90);
+  }
+
+  // ৫. কিউট স্মাইল
+  display.drawCircleHelper(64, 48, 8, 2, WHITE); 
+
+  display.display();
 }
+
 
 void showWeatherPage() {
   display.setTextSize(1); display.setCursor(0, 0); display.print(currentLocation);
