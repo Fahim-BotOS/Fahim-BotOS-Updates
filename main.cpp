@@ -1,5 +1,43 @@
 #include <HTTPUpdate.h>
 const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
+
+#include <Arduino.h>
+#include <HTTPUpdate.h>
+
+// ওটিএ লিঙ্ক
+const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
+
+// --- ফাংশনগুলোকে আগে থেকে চিনিয়ে দেওয়া (Forward Declaration) ---
+void handleSave();
+void startCaptivePortal();
+void fetchSmartWeather();
+void handleNormal();
+void handleDizzy();
+void handleAngry();
+void handleSleep();
+void playTone(int frequency, int duration);
+void playBootSound();
+void playSadSound();
+void playLoveSound();
+void playAngrySound();
+void playDizzySound();
+void playSleepSound();
+void playScaredSound();
+void playMoveSound();
+void drawMood(int mood);
+void expressionSkeptical();
+void expressionDizzy();
+void expressionSleepy();
+void expressionSuperAngry();
+void drawEye(int x, int y, int w, int h, int r);
+void expressionNormal();
+void expressionSad();
+void expressionLove();
+void showWeatherPage();
+void showTimePage();
+void drawLoading();
+void drawAutoExpressions();
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
