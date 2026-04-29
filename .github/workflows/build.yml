@@ -36,4 +36,3 @@ jobs:
         with:
           name: firmware
           path: .pio/build/esp32-c3-devkitm-1/firmware.bin
-
