@@ -22,11 +22,13 @@ void playDizzySound();
 void playSleepSound();
 void playScaredSound();
 void playMoveSound();
+void playRelaxSound();
 void drawMood(int mood);
 void expressionSkeptical();
 void expressionDizzy();
 void expressionSleepy();
 void expressionSuperAngry();
+void expressionVebchi();
 void drawEye(int x, int y, int w, int h, int r);
 void expressionNormal();
 void expressionSad();
@@ -167,6 +169,8 @@ unsigned long lastSleepCheck = 0;
 unsigned long moodEndTime = 0;
 int currentMood = 0; 
 bool isMoving = false;
+int touchCount = 0; // টাচ গণনার জন্য
+unsigned long lastTouchTime = 0; // কতক্ষণ আগে টাচ করা হয়েছে
 
 // ==========================================
 // --- ১. কাস্টম ক্যাপটিভ পোর্টাল হ্যান্ডলার ---
@@ -190,19 +194,26 @@ String getSetupHTML() {
 void handleSave() {
   stSSID = server.arg("ssid");
   stPass = server.arg("pass");
-  server.send(200, "text/html", "<h2>Setup Saved!</h2><p>Pixel is restarting to connect...</p>");
-  delay(2000);
+
+  // আগে সেভ করুন
   preferences.begin("wifi-data", false);
   preferences.putString("ssid", stSSID);
   preferences.putString("pass", stPass);
   preferences.end();
+
+  // তারপর response পাঠান
+  server.send(200, "text/html", "<h2>Setup Saved!</h2><p>Pixel is restarting...</p>");
+  
+  delay(1000);
   ESP.restart();
 }
 
+
 void startCaptivePortal() {
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(apSSID);
+  WiFi.softAP(apSSID); // পাসওয়ার্ড ছাড়া ওপেন নেটওয়ার্ক
   dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+  
   server.on("/", []() { server.send(200, "text/html", getSetupHTML()); });
   server.on("/save", HTTP_POST, handleSave);
   server.onNotFound([]() { server.send(200, "text/html", getSetupHTML()); });
@@ -211,15 +222,20 @@ void startCaptivePortal() {
   while(true) {
     dnsServer.processNextRequest();
     server.handleClient();
+    
     display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
     display.setCursor(25, 10); display.print("SETUP MODE");
     display.drawLine(0, 20, 128, 20, WHITE);
-    display.setCursor(5, 35); display.print("Connect: ");
-    display.setCursor(5, 45); display.print(apSSID);
+    display.setCursor(5, 35); display.print("Connect WiFi: ");
+    display.setCursor(5, 50); display.print(apSSID); // Pixel_Robot_Setup দেখাবে
     display.display();
     delay(10);
   }
 }
+
+
 
 // ==========================================
 // --- ২. স্মার্ট লোকেশন ও আবহাওয়া ---
@@ -306,25 +322,65 @@ void setup() {
   delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
 
   // ওয়াইফাই ডেটা রিট্রাইভ করা
-  preferences.begin("wifi-data", true);
-  stSSID = preferences.getString("ssid", "");
-  stPass = preferences.getString("pass", "");
-  preferences.end();
+  // ওয়াইফাই ডেটা রিট্রাইভ করা
+WiFi.disconnect(true);
+WiFi.mode(WIFI_OFF);
+delay(500);
 
-  if (stSSID == "") {
+preferences.begin("wifi-data", true);
+stSSID = preferences.getString("ssid", "");
+stPass = preferences.getString("pass", "");
+preferences.end();
+
+Serial.println("SSID: [" + stSSID + "]");
+Serial.println("PASS: [" + stPass + "]");
+
+if (stSSID == "") {
+  startCaptivePortal();
+} else {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("SSID:");
+  display.setCursor(0, 15);
+  display.print(stSSID);
+  display.display();
+  delay(2000);
+
+  WiFi.mode(WIFI_STA);
+  delay(200);
+  WiFi.begin(stSSID.c_str(), stPass.c_str());
+
+  int retry = 0;
+  while (WiFi.status() != WL_CONNECTED && retry < 40) {
+    delay(500);
+    drawLoading();
+    retry++;
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("WIFI FAILED!");
+    display.setCursor(0, 15);
+    display.print(stSSID);
+    display.setCursor(0, 30);
+    display.print(stPass);
+    display.display();
+    delay(3000);
+    preferences.begin("wifi-data", false);
+    preferences.clear();
+    preferences.end();
     startCaptivePortal();
   } else {
-    WiFi.begin(stSSID.c_str(), stPass.c_str());
-    int retry = 0;
-    while (WiFi.status() != WL_CONNECTED && retry < 30) {
-      drawLoading();
-      delay(500);
-      retry++;
-    }
-    if (WiFi.status() != WL_CONNECTED) {
-      startCaptivePortal();
-    }
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("CONNECTED!");
+    display.display();
+    delay(2000);
   }
+}
+
   
  if (MDNS.begin("pixel")) { // এখানে "pixel" হলো আপনার রোবটের নাম
   Serial.println("MDNS responder started");
@@ -356,23 +412,60 @@ void loop() {
   mpu.getEvent(&a, &g, &temp);
 
   // --- ১. টাচ সেন্সর লজিক ---
+    // --- চূড়ান্ত টাচ লজিক ---
   int touchState = digitalRead(TOUCH_PIN);
+
   if (touchState == HIGH) {
-    lastSleepCheck = currentMillis; 
-    if (!isTouching) { touchStartTime = currentMillis; isTouching = true; }
+    if (!isTouching) { 
+      touchStartTime = currentMillis; 
+      isTouching = true;
+      touchCount++;
+      lastTouchTime = currentMillis;
+    }
+    
     unsigned long duration = currentMillis - touchStartTime;
-    if (duration > 6000) { if (currentMood != 7) playAngrySound(); currentMood = 7; moodEndTime = currentMillis + 5000; } 
-    else if (duration > 2000) { if (currentMood != 2) playLoveSound(); currentMood = 2; moodEndTime = currentMillis + 3000; }
-  } 
-  else {
-    if (isTouching) { if (currentMillis - touchStartTime < 500) { currentMood = 1; playSadSound(); moodEndTime = currentMillis + 4000; } isTouching = false; }
+
+    // ১. ১০ সেকেন্ড ধরে রাখলে ঘুম (Sleep)
+    if (duration >= 10000) {
+      currentMood = 5; 
+      moodEndTime = currentMillis + 10000;
+    }
+    // ২. ৩ থেকে ১০ সেকেন্ড ধরে রাখলে আরাম (Relax)
+    else if (duration > 3000) {
+      currentMood = 10; 
+      moodEndTime = currentMillis + 1000; 
+    }
+    lastSleepCheck = currentMillis;
+  } else {
+    if (isTouching) {
+      unsigned long finalDuration = currentMillis - touchStartTime;
+      
+      // ৩. ১০০ms এর কম টাচ করলে মন খারাপ (Sad)
+      if (finalDuration < 100) {
+        currentMood = 1; 
+        moodEndTime = currentMillis + 3000;
+        playTone(300, 200); // মন খারাপের শব্দ
+      }
+      isTouching = false;
+    }
   }
 
-  // --- ২. মুভমেন্ট ও তালি শনাক্তকরণ লজিক ---
-  float totalAccel = sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z);
+  // ৪. দ্রুত ৩ বার টাচ করলে ভেংচি (Vebchi)
+  if (touchCount == 3) {
+    if (currentMillis - lastTouchTime < 1500) {
+      currentMood = 9; 
+      moodEndTime = currentMillis + 5000;
+      playTone(800, 100); playTone(1200, 100); // ভেংচি কাটার শব্দ
+      touchCount = 0;
+    }
+  }
   
-  // ঝাঁকি দিলে Dizzy হওয়া
-  if (totalAccel > 15.0) { if (currentMood != 4) playDizzySound(); currentMood = 4; moodEndTime = currentMillis + 5000; lastSleepCheck = currentMillis; }
+  // কাউন্টার রিসেট
+  if (currentMillis - lastTouchTime > 2000) touchCount = 0;
+
+// --- ২. মুভমেন্ট ও তালি শনাক্তকরণ লজিক ---
+detectGesture(); 
+
 
   // তালি (Clap) বা ইমপ্যাক্ট শনাক্তকরণ
   float zDifference = abs(a.acceleration.z - 9.81); 
@@ -444,6 +537,14 @@ void playDizzySound() { for (int hz = 400; hz < 1200; hz += 40) playTone(hz, 10)
 void playSleepSound() { for (int hz = 150; hz < 350; hz += 10) playTone(hz, 25); delay(100); for (int hz = 300; hz > 120; hz -= 8) playTone(hz, 40); }
 void playScaredSound() { for(int i=0; i<8; i++) { playTone(random(800, 1800), 40); delay(20); } }
 void playMoveSound() { for (int hz = 1200; hz < 1800; hz += 100) playTone(hz, 5); for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5); }
+void playRelaxSound() {
+  static unsigned long lastSoundTime = 0;
+  if (millis() - lastSoundTime > 800) { 
+    int freq = 200 + sin(millis() * 0.005) * 50; 
+    playTone(freq, 150); 
+    lastSoundTime = millis();
+  }
+}
 
 void drawMood(int mood) {
   switch(mood) {
@@ -453,8 +554,11 @@ void drawMood(int mood) {
     case 5: expressionSleepy(); break;
     case 7: expressionSuperAngry(); break;
     case 8: expressionSkeptical(); break; 
+    case 9: expressionVebchi(); break;
+    case 10: expressionRelax(); break;
   }
 }
+
 
 
 void expressionSkeptical() {
@@ -637,5 +741,92 @@ void drawLoading() {
   display.clearDisplay(); display.setCursor(20, 30); display.print("Connecting WiFi..."); display.display();
 }
 
-void drawAutoExpressions() { expressionNormal(); }
-    
+void drawAutoExpressions() { expressionNormal();
+}
+
+
+// এটি কোডের একদম শেষে অন্য ফ���ংশনগুলোর সাথে থাকবে
+void detectGesture() {
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  float force = sqrt(a.acceleration.x * a.acceleration.x + 
+                     a.acceleration.y * a.acceleration.y + 
+                     a.acceleration.z * a.acceleration.z);
+
+  if (force > 25.0) { 
+    currentMood = 7; 
+    playAngrySound();
+    moodEndTime = millis() + 4000;
+  }
+  else if (force > 11.5 && force < 14.5) {
+    static unsigned long moveStart = 0;
+    if (moveStart == 0) moveStart = millis();
+    if (millis() - moveStart > 2000) { 
+      currentMood = 2; 
+      playLoveSound();
+      moodEndTime = millis() + 4000;
+      moveStart = 0;
+    }
+  }
+}
+
+void expressionRelax() {
+  display.clearDisplay();
+  
+  // ভ্রু
+  display.drawCircleHelper(40, 32, 18, 1, WHITE); 
+  display.drawCircleHelper(88, 32, 18, 1, WHITE);
+
+  // চোখ
+  display.drawCircle(40, 42, 16, WHITE); 
+  display.drawCircle(88, 42, 16, WHITE);
+
+  // চোখের মোশন
+  for (int i = 0; i < 12; i++) {
+    int y = 44 + sin((millis() * 0.005) + i) * 3;
+    display.drawPixel(34 + i, y, WHITE);
+    display.drawPixel(82 + i, y, WHITE);
+  }
+  
+  // মুখ
+  display.fillCircleHelper(64, 52, 10, 2, 0, WHITE); 
+  display.fillCircleHelper(64, 52, 10, 1, 0, WHITE); 
+  
+  if (millis() % 1000 < 500) {
+     display.fillCircle(64, 58, 6, BLACK); 
+  }
+
+  // সাউন্ড কল করা
+  playRelaxSound(); 
+
+  display.display();
+}
+
+void expressionVebchi() {
+  display.clearDisplay();
+  
+  // ১. চোখ (চিত্র ১৮৪২৮ অনুযায়ী - একটি খোলা ও একটি বন্ধ)
+  display.fillCircle(88, 35, 12, WHITE); // ডান চোখ খোলা
+  display.fillCircle(88, 35, 4, BLACK);  // মণি
+  
+  // বাম চোখ বন্ধ (উইঙ্ক করা)
+  display.drawLine(25, 35, 45, 25, WHITE); 
+  display.drawLine(25, 35, 45, 45, WHITE);
+
+  // ২. ভ্রু
+  display.drawLine(20, 15, 40, 20, WHITE);
+  display.drawLine(108, 15, 88, 20, WHITE);
+
+  // ৩. মুখ ও জিবের অ্যানিমেশন
+  display.drawRoundRect(44, 50, 40, 10, 5, WHITE); // মুখ
+  
+  static float tongueOffset = 0;
+  tongueOffset = sin(millis() * 0.01) * 4; // জিব ডানে-বামে নড়বে
+  
+  display.fillRoundRect(56 + tongueOffset, 55, 16, 12, 5, WHITE); // জিব
+  display.drawLine(64 + tongueOffset, 55, 64 + tongueOffset, 62, BLACK); // জিবের রেখা
+
+  display.display();
+}
+
