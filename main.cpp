@@ -37,6 +37,8 @@ void showTimePage();
 void drawLoading();
 void drawAutoExpressions();
 void playSnoreSound();
+void expressionRelax();
+void detectGesture();
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -540,16 +542,6 @@ void playLoveSound() { playTone(1200, 150); delay(50); playTone(1500, 150); dela
 void playAngrySound() { for(int i=0; i<5; i++) { playTone(200, 100); delay(50); } }
 void playDizzySound() { for (int hz = 400; hz < 1200; hz += 40) playTone(hz, 10); for (int hz = 1200; hz > 400; hz -= 40) playTone(hz, 10); }
 void playSleepSound() { for (int hz = 150; hz < 350; hz += 10) playTone(hz, 25); delay(100); for (int hz = 300; hz > 120; hz -= 8) playTone(hz, 40); }
-void playSnoreSound() {
-  // একটি মৃদু নাক ডাকার শব্দ যা নিচ থেকে উপরে উঠবে এবং আবার নামবে
-  for (int hz = 150; hz < 250; hz += 5) {
-    playTone(hz, 15);
-  }
-  delay(100);
-  for (int hz = 250; hz > 150; hz -= 5) {
-    playTone(hz, 15);
-  }
-}
 void playScaredSound() { for(int i=0; i<8; i++) { playTone(random(800, 1800), 40); delay(20); } }
 void playMoveSound() { for (int hz = 1200; hz < 1800; hz += 100) playTone(hz, 5); for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5); }
 
@@ -836,3 +828,7 @@ void playSnoreSound() {
     playTone(hz, 15);
   }
 }
+
+
+
+    
