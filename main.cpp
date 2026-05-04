@@ -22,7 +22,6 @@ void playDizzySound();
 void playSleepSound();
 void playScaredSound();
 void playMoveSound();
-void playRelaxSound();
 void drawMood(int mood);
 void expressionSkeptical();
 void expressionDizzy();
@@ -37,6 +36,7 @@ void showWeatherPage();
 void showTimePage();
 void drawLoading();
 void drawAutoExpressions();
+void playSnoreSound();
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -412,56 +412,48 @@ void loop() {
   mpu.getEvent(&a, &g, &temp);
 
   // --- ১. টাচ সেন্সর লজিক ---
-    // --- চূড়ান্ত টাচ লজিক ---
-  int touchState = digitalRead(TOUCH_PIN);
+  // --- উন্নত টাচ লজিক ---
+int touchState = digitalRead(TOUCH_PIN);
 
-  if (touchState == HIGH) {
-    if (!isTouching) { 
-      touchStartTime = currentMillis; 
-      isTouching = true;
-      touchCount++;
-      lastTouchTime = currentMillis;
-    }
-    
-    unsigned long duration = currentMillis - touchStartTime;
-
-    // ১. ১০ সেকেন্ড ধরে রাখলে ঘুম (Sleep)
-    if (duration >= 10000) {
-      currentMood = 5; 
-      moodEndTime = currentMillis + 10000;
-    }
-    // ২. ৩ থেকে ১০ সেকেন্ড ধরে রাখলে আরাম (Relax)
-    else if (duration > 3000) {
-      currentMood = 10; 
-      moodEndTime = currentMillis + 1000; 
-    }
-    lastSleepCheck = currentMillis;
-  } else {
-    if (isTouching) {
-      unsigned long finalDuration = currentMillis - touchStartTime;
-      
-      // ৩. ১০০ms এর কম টাচ করলে মন খারাপ (Sad)
-      if (finalDuration < 100) {
-        currentMood = 1; 
-        moodEndTime = currentMillis + 3000;
-        playTone(300, 200); // মন খারাপের শব্দ
-      }
-      isTouching = false;
-    }
-  }
-
-  // ৪. দ্রুত ৩ বার টাচ করলে ভেংচি (Vebchi)
-  if (touchCount == 3) {
-    if (currentMillis - lastTouchTime < 1500) {
-      currentMood = 9; 
-      moodEndTime = currentMillis + 5000;
-      playTone(800, 100); playTone(1200, 100); // ভেংচি কাটার শব্দ
-      touchCount = 0;
-    }
+if (touchState == HIGH) {
+  if (!isTouching) { 
+    touchStartTime = millis(); // টাচ শুরু হওয়ার সময়
+    isTouching = true;
+    touchCount++;
+    lastTouchTime = millis();
   }
   
-  // কাউন্টার রিসেট
-  if (currentMillis - lastTouchTime > 2000) touchCount = 0;
+  unsigned long duration = millis() - touchStartTime;
+
+  // শর্ত ১: একটানা ৩ সেকেন্ডের বেশি হাত বুলালে (Relax Mode)
+  if (duration > 3000 && duration < 10000) {
+    currentMood = 10; // আমরা ১০ নম্বর মুড হিসেবে Relax সেট করছি
+    moodEndTime = millis() + 500; // হাত বুলানো অবস্থায় মুড থাকবে
+  } 
+  // শর্ত ২: একটানা ১০ সেকেন্ড টাচ করে রাখলে (Sleep Mode)
+  else if (duration >= 10000) {
+    currentMood = 5; // Sleep Mode
+    moodEndTime = millis() + 10000;
+  }
+} else {
+  if (isTouching) {
+    unsigned long finalDuration = millis() - touchStartTime;
+    
+    // শর্ত ৩: খুব হালকা টাচ (১০০ ms এর কম) করলে Sad মুড
+    if (finalDuration < 100) {
+      currentMood = 1; // Sad Mode
+      moodEndTime = millis() + 2000;
+    }
+    isTouching = false;
+  }
+}
+
+// ৩ বার দ্রুত টাচ করলে ভেংচি (আগের লজিক)
+if (touchCount == 3 && (millis() - lastTouchTime < 1500)) {
+  currentMood = 9; 
+  moodEndTime = millis() + 4000;
+  touchCount = 0;
+}
 
 // --- ২. মুভমেন্ট ও তালি শনাক্তকরণ লজিক ---
 detectGesture(); 
@@ -508,14 +500,27 @@ detectGesture();
 
   // --- ৫. রেন্ডারিং ---
   display.clearDisplay();
-  if (currentMillis < moodEndTime || currentMood == 5) { drawMood(currentMood); } 
+  static unsigned long lastSnoreTime = 0; 
+
+  if (currentMood == 5) { // যদি রোবট স্লিপ মোডে থাকে
+    drawMood(5); // ঘুমের অভিব্যক্তি দেখাবে
+    
+    if (currentMillis - lastSnoreTime > 6000) { // প্রতি ৬ সেকেন্ড পর পর
+      playSnoreSound(); 
+      lastSnoreTime = currentMillis;
+    }
+  } 
+  else if (currentMillis < moodEndTime) { 
+    drawMood(currentMood); 
+  } 
   else {
     if (currentPage == 0) drawAutoExpressions(); 
     else if (currentPage == 1) showWeatherPage();
     else if (currentPage == 2) showTimePage();
   }
-  display.display();
-  delay(30);
+
+  display.display(); // এটি আগে থেকেই আপনার কোডে আছে
+  delay(30);         // এটিও আগে থেকেই আছে
 }
 
 // --- সাউন্ড ও গ্রাফিক্স ফাংশনসমূহ (বিস্তারিত) ---
@@ -535,16 +540,18 @@ void playLoveSound() { playTone(1200, 150); delay(50); playTone(1500, 150); dela
 void playAngrySound() { for(int i=0; i<5; i++) { playTone(200, 100); delay(50); } }
 void playDizzySound() { for (int hz = 400; hz < 1200; hz += 40) playTone(hz, 10); for (int hz = 1200; hz > 400; hz -= 40) playTone(hz, 10); }
 void playSleepSound() { for (int hz = 150; hz < 350; hz += 10) playTone(hz, 25); delay(100); for (int hz = 300; hz > 120; hz -= 8) playTone(hz, 40); }
-void playScaredSound() { for(int i=0; i<8; i++) { playTone(random(800, 1800), 40); delay(20); } }
-void playMoveSound() { for (int hz = 1200; hz < 1800; hz += 100) playTone(hz, 5); for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5); }
-void playRelaxSound() {
-  static unsigned long lastSoundTime = 0;
-  if (millis() - lastSoundTime > 800) { 
-    int freq = 200 + sin(millis() * 0.005) * 50; 
-    playTone(freq, 150); 
-    lastSoundTime = millis();
+void playSnoreSound() {
+  // একটি মৃদু নাক ডাকার শব্দ যা নিচ থেকে উপরে উঠবে এবং আবার নামবে
+  for (int hz = 150; hz < 250; hz += 5) {
+    playTone(hz, 15);
+  }
+  delay(100);
+  for (int hz = 250; hz > 150; hz -= 5) {
+    playTone(hz, 15);
   }
 }
+void playScaredSound() { for(int i=0; i<8; i++) { playTone(random(800, 1800), 40); delay(20); } }
+void playMoveSound() { for (int hz = 1200; hz < 1800; hz += 100) playTone(hz, 5); for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5); }
 
 void drawMood(int mood) {
   switch(mood) {
@@ -745,7 +752,7 @@ void drawAutoExpressions() { expressionNormal();
 }
 
 
-// এটি কোডের একদম শেষে অন্য ফ���ংশনগুলোর সাথে থাকবে
+// এটি কোডের একদম শেষে অন্য ফাংশনগুলোর সাথে থাকবে
 void detectGesture() {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
@@ -771,62 +778,61 @@ void detectGesture() {
   }
 }
 
-void expressionRelax() {
-  display.clearDisplay();
-  
-  // ভ্রু
-  display.drawCircleHelper(40, 32, 18, 1, WHITE); 
-  display.drawCircleHelper(88, 32, 18, 1, WHITE);
-
-  // চোখ
-  display.drawCircle(40, 42, 16, WHITE); 
-  display.drawCircle(88, 42, 16, WHITE);
-
-  // চোখের মোশন
-  for (int i = 0; i < 12; i++) {
-    int y = 44 + sin((millis() * 0.005) + i) * 3;
-    display.drawPixel(34 + i, y, WHITE);
-    display.drawPixel(82 + i, y, WHITE);
-  }
-  
-  // মুখ
-  display.fillCircleHelper(64, 52, 10, 2, 0, WHITE); 
-  display.fillCircleHelper(64, 52, 10, 1, 0, WHITE); 
-  
-  if (millis() % 1000 < 500) {
-     display.fillCircle(64, 58, 6, BLACK); 
-  }
-
-  // সাউন্ড কল করা
-  playRelaxSound(); 
-
-  display.display();
-}
-
 void expressionVebchi() {
   display.clearDisplay();
   
-  // ১. চোখ (চিত্র ১৮৪২৮ অনুযায়ী - একটি খোলা ও একটি বন্ধ)
-  display.fillCircle(88, 35, 12, WHITE); // ডান চোখ খোলা
-  display.fillCircle(88, 35, 4, BLACK);  // মণি
+  // ১. চোখ (একটু Narrow এবং দুষ্টু চাহনি)
+  display.fillRoundRect(25, 25, 30, 20, 5, WHITE); // বাম চোখ
+  display.fillRoundRect(73, 25, 30, 20, 5, WHITE); // ডান চোখ
   
-  // বাম চোখ বন্ধ (উইঙ্ক করা)
-  display.drawLine(25, 35, 45, 25, WHITE); 
-  display.drawLine(25, 35, 45, 45, WHITE);
+  // মণি (মাঝখানে, একটু বড়)
+  display.fillCircle(40, 35, 4, BLACK); 
+  display.fillCircle(88, 35, 4, BLACK);
 
-  // ২. ভ্রু
-  display.drawLine(20, 15, 40, 20, WHITE);
-  display.drawLine(108, 15, 88, 20, WHITE);
+  // ২. ভ্রু (দুষ্টু লুক দেওয়ার জন্য)
+  display.drawLine(25, 18, 45, 25, WHITE); // বাম ভ্রু
+  display.drawLine(103, 18, 83, 25, WHITE); // ডান ভ্রু
 
-  // ৩. মুখ ও জিবের অ্যানিমেশন
-  display.drawRoundRect(44, 50, 40, 10, 5, WHITE); // মুখ
+  // ৩. জিব মিলিয়ে মুখ (Poking Tongue)
+  display.drawCircleHelper(64, 52, 6, 2, WHITE); // উপরের ঠোঁট
   
-  static float tongueOffset = 0;
-  tongueOffset = sin(millis() * 0.01) * 4; // জিব ডানে-বামে নড়বে
+  static float tongueY = 54; // জিবের নড়াচড়া
+  tongueY = 54 + sin(millis() * 0.008) * 3;
   
-  display.fillRoundRect(56 + tongueOffset, 55, 16, 12, 5, WHITE); // জিব
-  display.drawLine(64 + tongueOffset, 55, 64 + tongueOffset, 62, BLACK); // জিবের রেখা
+  // লম্বা জিব (Tongue shape)
+  display.fillRoundRect(56, 54, 16, (int)(72 - tongueY), 6, WHITE); 
+  display.drawLine(64, 56, 64, (int)(68 - tongueY), BLACK); // জিবের মাঝের লাইন
+  
+  // ৪. দুষ্টু অভিব্যক্তি (Naughty lines)
+  if ((millis() / 500) % 2 == 0) {
+    display.setCursor(110, 40); display.print("Nya!");
+    display.setCursor(5, 40); display.print("Nya!");
+  }
 
   display.display();
 }
 
+void expressionRelax() {
+  display.clearDisplay();
+  // শান্ত চোখ (নিচের দিকে বাঁকানো)
+  display.drawCircleHelper(40, 40, 15, 1, WHITE); // বাম চোখ
+  display.drawCircleHelper(88, 40, 15, 1, WHITE); // ডান চোখ
+  // ছোট হাসিমুখ
+  display.drawCircleHelper(64, 48, 8, 2, WHITE); 
+  
+  if ((millis() / 1000) % 2 == 0) {
+    display.setCursor(100, 20); display.print("~");
+    display.setCursor(20, 20); display.print("~");
+  }
+  display.display();
+}
+
+void playSnoreSound() {
+  for (int hz = 120; hz < 220; hz += 5) {
+    playTone(hz, 15);
+  }
+  delay(150);
+  for (int hz = 220; hz > 120; hz -= 5) {
+    playTone(hz, 15);
+  }
+}
