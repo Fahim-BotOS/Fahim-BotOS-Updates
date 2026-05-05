@@ -5,22 +5,23 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
       - name: Install PlatformIO
-        run: |
-          python -m pip install --upgrade pip
-          pip install platformio
+        run: pip install platformio
 
       - name: Move File for Build
         run: |
@@ -31,17 +32,16 @@ jobs:
         run: pio run
 
       - name: Delete old Release
-        run: |
-          gh release delete latest --yes || true
+        run: gh release delete latest --yes || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create new Release with firmware
+      - name: Create Release
         run: |
           gh release create latest \
             .pio/build/esp32-c3-devkitm-1/firmware.bin \
-            --title "Latest Firmware" \
-            --notes "Auto build from main branch" \
+            --title "Latest" \
+            --notes "Auto build" \
             --latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
