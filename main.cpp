@@ -454,14 +454,31 @@ void setup() {
     server.on("/sleep", handleSleep);
     server.begin();
 if (WiFi.status() == WL_CONNECTED) {
-    check_for_updates(); // আপনার ওটিএ ফাংশনটি কল হবে
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("CONNECTED!");
+    display.display();
+    delay(1000);
 
-    // এরপর সার্ভিসগুলো শুরু হবে
+    // ১. প্রথমে আপডেট চেক করবে
+    check_for_updates(); 
+
+    // ২. আপডেট চেক শেষ হলে আবার চেক করবে কানেকশন আছে কি না
+    if (WiFi.status() != WL_CONNECTED) {
+        WiFi.begin(stSSID.c_str(), stPass.c_str());
+        int retry = 0;
+        while (WiFi.status() != WL_CONNECTED && retry < 20) {
+            delay(500);
+            retry++;
+        }
+    }
+
+    // ৩. এরপর বাকি সার্ভিস শুরু
     timeClient.begin();
     fetchSmartWeather();
     lastSleepCheck = millis();
     playBootSound();
- }
+}
 }
 
 
