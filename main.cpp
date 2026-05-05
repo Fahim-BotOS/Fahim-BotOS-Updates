@@ -214,8 +214,13 @@ void handleSave() {
 
 
 void startCaptivePortal() {
+    WiFi.disconnect(true, true);
+    delay(1000);
+    WiFi.mode(WIFI_OFF);
+    delay(500);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(apSSID); // পাসওয়ার্ড ছাড়া ওপেন নেটওয়ার্ক
+    delay(500);
+    WiFi.softAP(apSSID);
     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 
     server.on("/", []() {
@@ -313,17 +318,26 @@ void check_for_updates() {
     display.display();
     Serial.println("Checking for updates...");
 
-    WiFiClientSecure client;
-    client.setInsecure(); // SSL সার্টিফিকেট ইগনোর করবে
+    // OTA শুরু হওয়ার আগেই flag সেট করুন
+    httpUpdate.onStart([]() {
+        Serial.println("OTA Started! Setting flag before reboot...");
+        Preferences p;
+        p.begin("system", false);
+        p.putBool("ota_done", true);
+        p.end();
+    });
 
-    // গিটহাবের জন্য User-Agent সেট করা খুব জরুরি
+    WiFiClientSecure client;
+    client.setInsecure();
     httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     
     t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
 
     switch(ret) {
         case HTTP_UPDATE_FAILED:
-            Serial.printf("Update Failed! Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+            Serial.printf("Update Failed! Error (%d): %s\n", 
+                httpUpdate.getLastError(), 
+                httpUpdate.getLastErrorString().c_str());
             display.clearDisplay();
             display.setCursor(10, 20);
             display.print("Update Failed!");
@@ -341,17 +355,9 @@ void check_for_updates() {
             break;
 
         case HTTP_UPDATE_OK:
-            Serial.println("Update OK! Clearing old memory...");
-            
-            // এই ৪টি লাইন এখানে যোগ করুন
-            preferences.begin("wifi", false); 
-            preferences.clear(); 
-            preferences.end();
-            
-            delay(1000);
-            // এরপর অটো রিস্টার্ট হবে এবং ফ্রেশ মেমোরি নিয়ে পোর্টাল চালু হবে
+            // এখানে কোড লেখার দরকার নেই
+            // onStart()-এ আগেই flag সেট হয়ে গেছে
             break;
-
     }
 }
 
@@ -392,10 +398,24 @@ void setup() {
     delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
 
     // ওয়াইফাই ডেটা রিট্রাইভ করা
-    // ওয়াইফাই ডেটা রিট্রাইভ করা
-    WiFi.disconnect(true);
+    // OTA flag চেক করুন
+    preferences.begin("system", true);
+    bool otaDone = preferences.getBool("ota_done", false);
+    preferences.end();
+
+    if (otaDone) {
+        // flag রিসেট করুন
+        preferences.begin("system", false);
+        preferences.putBool("ota_done", false);
+        preferences.end();
+        Serial.println("OTA boot detected! Doing full WiFi reset...");
+    }
+
+    // WiFi chip সম্পূর্ণ রিসেট
+    WiFi.disconnect(true, true);
+    delay(1000);
     WiFi.mode(WIFI_OFF);
-    delay(500);
+    delay(1000);
 
     preferences.begin("wifi-data", true);
     stSSID = preferences.getString("ssid", "");
