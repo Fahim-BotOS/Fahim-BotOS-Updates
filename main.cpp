@@ -300,7 +300,13 @@ void setup() {
   pinMode(TOUCH_PIN, INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
 
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { for(;;); }
+  // ডিসপ্লে চেক
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); 
+  }
+  
+  // সেন্সর ইনিশিয়ালাইজেশন
   mpu.begin();
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
   mpu.setGyroRange(MPU6050_RANGE_500_DEG);
@@ -309,55 +315,56 @@ void setup() {
   display.clearDisplay();
   display.setTextColor(WHITE);
 
-  // --- বুট লোগো প্রদর্শন শুরু ---
+  // --- বুট লোগো প্রদর্শন (একবার) ---
   display.clearDisplay();
-  
-  // লোগোটি পুরো স্ক্রিন জুড়ে (০, ০) পজিশন থেকে দেখাবে
+  // লোগোটি স্ক্রিনের মাঝখানে দেখাবে
   display.drawBitmap(0, 0, pixel_logo, 128, 64, WHITE); 
   display.display();
   
-  playBootSound(); // লোগো আসার সময় শব্দ হবে
+  playBootSound(); // লোগো আসার সময় একবার শব্দ হবে
   delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
   // --- বুট লোগো প্রদর্শন শেষ ---
-
   
-  playBootSound(); // লোগো আসার সময় শব্দ হবে
-  delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
+    // --- ওয়াইফাই ডাটা রিট্রাইভ করা ---
+  preferences.begin("wifi-data", true); 
+  stSSID = preferences.getString("ssid", "");
+  stPass = preferences.getString("pass", "");
+  preferences.end();
 
-  // ওয়াইফাই ডেটা রিট্রাইভ করা
-  // ওয়াইফাই ডেটা রিট্রাইভ করা
-WiFi.disconnect(true);
-WiFi.mode(WIFI_OFF);
-delay(500);
+  Serial.println("Stored SSID: [" + stSSID + "]");
+  
+  if (stSSID == "" || stSSID.length() < 1) {
+    // যদি মেমোরিতে কিছু না থাকে, তবেই সব ডিসকানেক্ট করে পোর্টাল চালু হবে
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(500);
+    startCaptivePortal();
+  } else {
+    // মেমোরিতে ডাটা থাকলে স্ক্রিনে দেখাবে এবং কানেক্ট করার চেষ্টা করবে
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("Connecting to:");
+    display.setCursor(0, 15);
+    display.print(stSSID);
+    display.display();
+    
+    // ওয়াইফাই মোড সেট করা
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(stSSID.c_str(), stPass.c_str());
+    delay(1000); 
+  }
 
-preferences.begin("wifi-data", true);
-stSSID = preferences.getString("ssid", "");
-stPass = preferences.getString("pass", "");
-preferences.end();
-
-Serial.println("SSID: [" + stSSID + "]");
-Serial.println("PASS: [" + stPass + "]");
-
-if (stSSID == "") {
-  startCaptivePortal();
-} else {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.print("SSID:");
-  display.setCursor(0, 15);
-  display.print(stSSID);
-  display.display();
-  delay(2000);
-
-  WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_STA);
   delay(200);
   WiFi.begin(stSSID.c_str(), stPass.c_str());
 
   int retry = 0;
+  // কানেকশনের জন্য ২০ সেকেন্ড সময় দিন (৪০ * ৫০০ms)
   while (WiFi.status() != WL_CONNECTED && retry < 40) {
     delay(500);
-    drawLoading();
+    drawLoading(); 
+    Serial.print(".");
     retry++;
   }
 
@@ -366,20 +373,23 @@ if (stSSID == "") {
     display.setCursor(0, 0);
     display.print("WIFI FAILED!");
     display.setCursor(0, 15);
-    display.print(stSSID);
-    display.setCursor(0, 30);
-    display.print(stPass);
+    display.print("Check Router/Pass");
     display.display();
     delay(3000);
-    preferences.begin("wifi-data", false);
-    preferences.clear();
-    preferences.end();
-    startCaptivePortal();
-} else {
+
+    // গুরুত্বপূর্ণ পরিবর্তন: preferences.clear() সরিয়ে দেওয়া হয়েছে।
+    // যাতে পাসওয়ার্ড ভুল না হলে অটোমেটিক পরে কানেক্ট হতে পারে।
+    
+    startCaptivePortal(); // শুধু পোর্টালে যাবে, ডাটা মুছবে না
+  } else {
     // সফলভাবে কানেক্ট হলে
     display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("CONNECTED!");
+    display.setTextSize(1);
+    display.setCursor(0, 20);
+    display.print("WIFI CONNECTED!");
+    display.setCursor(0, 40);
+    display.print("IP: "); 
+    display.print(WiFi.localIP().toString());
     display.display();
     delay(2000);
 
@@ -390,47 +400,66 @@ if (stSSID == "") {
     display.display();
 
     WiFiClientSecure* client = new WiFiClientSecure;
-    client->setInsecure();
+    client->setInsecure(); // GitHub এর জন্য SSL ভেরিফিকেশন এড়ানো
     httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+    
+    // আপডেট কল করা
     t_httpUpdate_return ret = httpUpdate.update(*client, firmware_url);
-    delete client;
-
+    
     if (ret == HTTP_UPDATE_FAILED) {
-        Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        Serial.printf("Auto-update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        display.setCursor(0, 40);
+        display.print("Update Skip/Fail");
+        display.display();
+        delay(1000);
     }
+    delete client;
     // --- ওটিএ আপডেট চেক শেষ ---
 
+    // MDNS সেটআপ (যাতে ব্রাউজারে http://pixel.local লিখে ঢোকা যায়)
     if (MDNS.begin("pixel")) { 
       Serial.println("MDNS responder started");
     }
+
+    // ওয়েব সার্ভার রুট কনফিগারেশন
     server.on("/normal", handleNormal);
     server.on("/dizzy", handleDizzy);
     server.on("/angry", handleAngry);
     server.on("/sleep", handleSleep);
+    
+    // ম্যানুয়াল আপডেট রুট
     server.on("/update", []() {
-      server.send(200, "text/plain", "Updating...");
+      server.send(200, "text/plain", "Robot is Updating... Please wait.");
       delay(500);
-      // OTA এর আগে credentials সেভ
+
+      // OTA এর আগে নিশ্চিতভাবে credentials সেভ করা
       preferences.begin("wifi-data", false);
       preferences.putString("ssid", stSSID);
       preferences.putString("pass", stPass);
       preferences.end();
-      delay(100); // সেভ হওয়ার জন্য সময় দিন
+      delay(200); 
 
-      WiFiClientSecure* client = new WiFiClientSecure;
-      client->setInsecure();
+      WiFiClientSecure* updateClient = new WiFiClientSecure;
+      updateClient->setInsecure();
       httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-      httpUpdate.update(*client, firmware_url);
-      delete client;
+      
+      t_httpUpdate_return manualRet = httpUpdate.update(*updateClient, firmware_url);
+      
+      if (manualRet == HTTP_UPDATE_FAILED) {
+          Serial.printf("Manual Update Failed: %s\n", httpUpdate.getLastErrorString().c_str());
+      }
+      delete updateClient;
     });
+
     server.begin();
     timeClient.begin();
     fetchSmartWeather();
     lastSleepCheck = millis();
     playBootSound(); 
-  } // ← else শেষ (WiFi connected ব্লক)
-} // ← outer else শেষ (stSSID != "" ব্লক)
+    
+  } // ← else শেষ (WiFi connected ব্লক)// ← outer else শেষ (stSSID != "" ব্লক)
 } // ← setup() শেষ
+
 
 // ==========================================
 // --- ৪. মেইন লুপ ---
