@@ -833,49 +833,93 @@ void detectGesture() {
 void expressionVebchi() {
   display.clearDisplay();
   
-  // ১. চোখ (একটু Narrow এবং দুষ্টু চাহনি)
-  display.fillRoundRect(25, 25, 30, 20, 5, WHITE); // বাম চোখ
-  display.fillRoundRect(73, 25, 30, 20, 5, WHITE); // ডান চোখ
-  
-  // মণি (মাঝখানে, একটু বড়)
-  display.fillCircle(40, 35, 4, BLACK); 
-  display.fillCircle(88, 35, 4, BLACK);
+  // ১. চোখ (ইমেজ ০ থেকে অনুপ্রাণিত - droopy sleepy looks)
+  for(int i=0; i<2; i++) {
+    int centerX = (i == 0) ? 40 : 88; // দুই চোখের সেন্টার
+    
+    // চোখের সাদা অংশ (droopy oval shape)
+    display.fillRoundRect(centerX - 15, 20, 30, 20, 8, WHITE);
+    
+    // চোখের মণি (নিচের দিকে তাকিয়ে থাকা)
+    display.fillCircle(centerX, 35, 5, BLACK);
+    
+    // চোখের পাতা (ভারী ভাব দেওয়ার জন্য উপরে হালকা কভার)
+    display.fillRoundRect(centerX - 15, 18, 30, 8, 4, BLACK);
+  }
 
-  // ২. ভ্রু (দুষ্টু লুক দেওয়ার জন্য)
-  display.drawLine(25, 18, 45, 25, WHITE); // বাম ভ্রু
-  display.drawLine(103, 18, 83, 25, WHITE); // ডান ভ্রু
+  // ২. ভ্রু (দুষ্টু লুকের জন্য কোণাকুণি)
+  display.drawLine(25, 15, 45, 22, WHITE); // বাম ভ্রু
+  display.drawLine(103, 15, 83, 22, WHITE); // ডান ভ্রু
 
-  // ৩. জিব মিলিয়ে মুখ (Poking Tongue)
-  display.drawCircleHelper(64, 52, 6, 2, WHITE); // উপরের ঠোঁট
+  // ৩. মুখ (ইমেজ ১ থেকে অনুপ্রাণিত - জিব বের করা ও দাঁত দেখানো)
+  display.drawCircleHelper(64, 50, 10, 2, WHITE); // উপরের ঠোঁট
   
-  static float tongueY = 54; // জিবের নড়াচড়া
-  tongueY = 54 + sin(millis() * 0.008) * 3;
+  // বড় দাঁত (rectangular shape)
+  display.fillRect(58, 50, 12, 5, WHITE); // উপরের দুই বড় দাঁত
+  display.drawLine(64, 50, 64, 55, BLACK); // দাঁতের মাঝের লাইন
+
+  static float tongueY = 56; // জিবের নড়াচড়া
+  tongueY = 56 + sin(millis() * 0.008) * 3;
   
   // লম্বা জিব (Tongue shape)
-  display.fillRoundRect(56, 54, 16, (int)(72 - tongueY), 6, WHITE); 
-  display.drawLine(64, 56, 64, (int)(68 - tongueY), BLACK); // জিবের মাঝের লাইন
+  display.fillRoundRect(56, 56, 16, (int)(75 - tongueY), 6, WHITE); 
+  display.drawLine(64, 58, 64, (int)(70 - tongueY), BLACK); // জিবের মাঝের লাইন
   
-  // ৪. দুষ্টু অভিব্যক্তি (Naughty lines)
+  // ৪. ঘুমের চিহ্ন (Animated "Zzz" - ইমেজ ০ থেকে)
+  // এটি প্রতি সেকেন্ডে একটি করে "Z" বাড়াবে
+  int zCount = (millis() / 1000) % 4; // ০ থেকে ৩ পর্যন্ত কাউন্ট
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  
+  if(zCount >= 1) { display.setCursor(100, 20); display.print("z"); }
+  if(zCount >= 2) { display.setCursor(110, 10); display.print("z"); }
+  if(zCount >= 3) { display.setCursor(118, 2); display.print("Z"); }
+
+  // ৫. দুষ্টু অভিব্যক্তি (Nya! টেক্সট)
   if ((millis() / 500) % 2 == 0) {
-    display.setCursor(110, 40); display.print("Nya!");
-    display.setCursor(5, 40); display.print("Nya!");
+    display.setCursor(5, 50); display.print("Nya!");
   }
 
   display.display();
 }
 
+
+
 void expressionRelax() {
   display.clearDisplay();
-  // শান্ত চোখ (নিচের দিকে বাঁকানো)
-  display.drawCircleHelper(40, 40, 15, 1, WHITE); // বাম চোখ
-  display.drawCircleHelper(88, 40, 15, 1, WHITE); // ডান চোখ
-  // ছোট হাসিমুখ
-  display.drawCircleHelper(64, 48, 8, 2, WHITE); 
   
-  if ((millis() / 1000) % 2 == 0) {
-    display.setCursor(100, 20); display.print("~");
-    display.setCursor(20, 20); display.print("~");
+  // ১. কিউট ঘুম-ঘুম চোখ (droopy sleepy eyes)
+  // চোখগুলো ইমোজির মতো একটু ভারী এবং নিচের দিকে নামানো দেখাবে
+  for(int i=0; i<2; i++) {
+    int centerX = (i == 0) ? 40 : 88; // বাম এবং ডান চোখের সেন্টার
+    
+    // চোখের সাদা অংশ (droopy oval shape)
+    display.fillRoundRect(centerX - 15, 20, 30, 20, 8, WHITE);
+    
+    // চোখের মণি (নিচের দিকে তাকিয়ে থাকা)
+    display.fillCircle(centerX, 35, 5, BLACK);
+    
+    // চোখের পাতা (ভারী ভাব দেওয়ার জন্য উপরে হালকা কভার)
+    display.fillRoundRect(centerX - 15, 18, 30, 8, 4, BLACK);
   }
+
+  // ২. ভ্রু (Eyebrows - ইমোজির মতো একটু উপরে উঠানো)
+  display.drawCircleHelper(40, 15, 10, 1, WHITE); 
+  display.drawCircleHelper(88, 15, 10, 1, WHITE);
+
+  // ৩. শান্ত হাসিমুখ (স্মুথ হাফ-সার্কেল)
+  display.drawCircleHelper(64, 50, 12, 2, WHITE); 
+  
+  // ৪. ঘুমের চিহ্ন (Animated "Zzz")
+  // এটি প্রতি সেকেন্ডে একটি করে "Z" বাড়াবে এবং ৩টি পর্যন্ত গিয়ে আবার রিস্টার্ট হবে
+  int zCount = (millis() / 1000) % 4; // ০ থেকে ৩ পর্যন্ত কাউন্ট
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  
+  if(zCount >= 1) { display.setCursor(100, 20); display.print("z"); }
+  if(zCount >= 2) { display.setCursor(110, 10); display.print("z"); }
+  if(zCount >= 3) { display.setCursor(118, 2); display.print("Z"); }
+
   display.display();
 }
 
@@ -888,7 +932,4 @@ void playSnoreSound() {
     playTone(hz, 15);
   }
 }
-
-
-
     
