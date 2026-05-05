@@ -381,8 +381,22 @@ if (stSSID == "") {
     display.display();
     delay(2000);
   }
-}
+      // --- ওটিএ আপডেট চেক শুরু ---
+    display.clearDisplay();
+    display.setCursor(0, 20);
+    display.print("Checking Update...");
+    display.display();
 
+    WiFiClientSecure client;
+    client.setInsecure(); // গিটহাবের সিকিউরিটি হ্যান্ডেল করার জন্য
+
+    // গিটহাব থেকে আপডেট চেক করবে
+    t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
+
+    if (ret == HTTP_UPDATE_FAILED) {
+        Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+    }
+    // --- ওটিএ আপডেট চেক শেষ ---
   
  if (MDNS.begin("pixel")) { // এখানে "pixel" হলো আপনার রোবটের নাম
   Serial.println("MDNS responder started");
