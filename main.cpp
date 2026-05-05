@@ -374,30 +374,30 @@ if (stSSID == "") {
     preferences.clear();
     preferences.end();
     startCaptivePortal();
-  } else {
+    } else {
+    // সফলভাবে কানেক্ট হলে
     display.clearDisplay();
     display.setCursor(0, 0);
     display.print("CONNECTED!");
     display.display();
     delay(2000);
-  }
-      // --- ওটিএ আপডেট চেক শুরু ---
-}
+
+    // --- ওটিএ আপডেট চেক শুরু (এই ব্লকের ভেতর আনুন) ---
     display.clearDisplay();
     display.setCursor(0, 20);
     display.print("Checking Update...");
     display.display();
 
     WiFiClientSecure client;
-    client.setInsecure(); // গিটহাবের সিকিউরিটি হ্যান্ডেল করার জন্য
+    client.setInsecure(); 
 
-    // গিটহাব থেকে আপডেট চেক করবে
     t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
 
     if (ret == HTTP_UPDATE_FAILED) {
         Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
     }
     // --- ওটিএ আপডেট চেক শেষ ---
+  } 
   
  if (MDNS.begin("pixel")) { // এখানে "pixel" হলো আপনার রোবটের নাম
   Serial.println("MDNS responder started");
