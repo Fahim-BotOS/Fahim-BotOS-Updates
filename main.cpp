@@ -397,23 +397,30 @@ if (stSSID == "") {
         Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
     }
     // --- ওটিএ আপডেট চেক শেষ ---
-  }
-  if (MDNS.begin("pixel")) { 
-    Serial.println("MDNS responder started");
-  }
 
-  server.on("/normal", handleNormal);
-  server.on("/dizzy", handleDizzy);
-  server.on("/angry", handleAngry);
-  server.on("/sleep", handleSleep);
-  server.begin();
-
-  timeClient.begin();
-  fetchSmartWeather();
-  lastSleepCheck = millis();
-  playBootSound(); 
-}
-}
+    if (MDNS.begin("pixel")) { 
+      Serial.println("MDNS responder started");
+    }
+    server.on("/normal", handleNormal);
+    server.on("/dizzy", handleDizzy);
+    server.on("/angry", handleAngry);
+    server.on("/sleep", handleSleep);
+    server.on("/update", []() {
+      server.send(200, "text/plain", "Updating...");
+      delay(500);
+      WiFiClientSecure client;
+      client.setInsecure();
+      httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+      httpUpdate.update(client, firmware_url);
+    });
+    server.begin();
+    timeClient.begin();
+    fetchSmartWeather();
+    lastSleepCheck = millis();
+    playBootSound(); 
+  } // ← else শেষ (WiFi connected ব্লক)
+} // ← outer else শেষ (stSSID != "" ব্লক)
+} // ← setup() শেষ
 
 // ==========================================
 // --- ৪. মেইন লুপ ---
@@ -842,3 +849,7 @@ void playSnoreSound() {
     playTone(hz, 15);
   }
 }
+
+
+
+    
