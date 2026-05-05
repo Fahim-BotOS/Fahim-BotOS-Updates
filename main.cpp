@@ -3,7 +3,7 @@
 #include <HTTPUpdate.h>
 
 // ওটিএ লিঙ্ক
-const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
+const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/download/v1.0.2/firmware.bin";
 
 // --- ফাংশনগুলোকে আগে থেকে চিনিয়ে দেওয়া (Forward Declaration) ---
 void handleSave();
