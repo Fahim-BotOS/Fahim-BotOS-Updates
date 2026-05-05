@@ -1,4 +1,4 @@
-name: Build ESP32-C3 Firmware
+name: Build and Release ESP32-C3 Firmware
 
 on:
   push:
@@ -26,13 +26,22 @@ jobs:
         run: |
           mkdir -p src
           cp *.ino src/main.cpp || cp *.cpp src/main.cpp
-          # এটি আপনার .ino ফাইলকে স্বয়ংক্রিয়ভাবে কম্পাইলযোগ্য করে তুলবে
 
       - name: Run PlatformIO Build
         run: pio run
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware
-          path: .pio/build/esp32-c3-devkitm-1/firmware.bin
+      - name: Delete old Release
+        run: |
+          gh release delete latest --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create new Release with firmware
+        run: |
+          gh release create latest \
+            .pio/build/esp32-c3-devkitm-1/firmware.bin \
+            --title "Latest Firmware" \
+            --notes "Auto build from main branch" \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
