@@ -213,7 +213,6 @@ void handleSave() {
     ESP.restart();
 }
 
-
 void startCaptivePortal() {
     WiFi.disconnect(true, true);
     delay(1000);
