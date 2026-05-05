@@ -410,6 +410,13 @@ if (stSSID == "") {
     server.on("/update", []() {
       server.send(200, "text/plain", "Updating...");
       delay(500);
+      // OTA এর আগে credentials সেভ
+      preferences.begin("wifi-data", false);
+      preferences.putString("ssid", stSSID);
+      preferences.putString("pass", stPass);
+      preferences.end();
+      delay(100); // সেভ হওয়ার জন্য সময় দিন
+
       WiFiClientSecure* client = new WiFiClientSecure;
       client->setInsecure();
       httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
