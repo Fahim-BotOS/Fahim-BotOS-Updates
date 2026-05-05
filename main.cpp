@@ -337,82 +337,66 @@ void setup() {
 
   Serial.println("Stored SSID: [" + stSSID + "]");
   
-  if (stSSID == "" || stSSID.length() < 1 || startSmartConfig) { 
-    Serial.println("Starting SmartConfig...");
-
-    // মেমোরি ক্লিয়ার করে ফ্রেশ স্টার্ট করা
+// Line 340 থেকে শুরু
+if (stSSID == "" || startSmartConfig) {
+    // SmartConfig মোড
     preferences.begin("wifi-data", false);
-    preferences.clear(); 
+    preferences.clear();
     preferences.end();
 
     WiFi.disconnect(true);
     WiFi.mode(WIFI_AP_STA);
     delay(500);
 
-    // ১. আপনার আইডিয়া: স্মার্ট কনফিগ চলাকালীন 'Zzz' এনিমেশন
-    drawZZZExpression(); 
-    
+    drawZZZExpression();
     WiFi.beginSmartConfig();
 
-    // স্মার্ট কনফিগ শেষ না হওয়া পর্যন্ত ঘুমের অভিব্যক্তি চলবে
     while (!WiFi.smartConfigDone()) {
-      delay(500);
-      Serial.print(".");
-      // আপনি চাইলে এই লুপের ভেতর আরও এনিমেশন ফ্রেম এড করতে পারেন
+        delay(500);
+        Serial.print(".");
     }
     Serial.println("\nSmartConfig Done!");
-  } 
-  else {
-    // ২. আগের সেভ করা ডাটা দিয়ে কানেক্ট করার চেষ্টা
-    WiFi.begin(stSSID.c_str(), stPass.c_str());
-  }
 
-  int retry = 0;
-  // কানেকশনের জন্য ২০ সেকেন্ড সময় দিন
-  while (WiFi.status() != WL_CONNECTED && retry < 40) {
+    // ✅ সেভ করো
+    stSSID = WiFi.SSID();
+    stPass = WiFi.psk();
+    preferences.begin("wifi-data", false);
+    preferences.putString("ssid", stSSID);
+    preferences.putString("pass", stPass);
+    preferences.end();
+}
+
+// ✅ একবারই কানেক্ট
+WiFi.mode(WIFI_STA);
+delay(200);
+WiFi.begin(stSSID.c_str(), stPass.c_str());
+
+int retry = 0;
+while (WiFi.status() != WL_CONNECTED && retry < 40) {
     delay(500);
-    // আপনি চাইলে এখানে কানেকশন চেষ্টা করার জন্য অন্য কোনো কিউট অভিব্যক্তি এড করতে পারেন
+    drawLoading();
     Serial.print(".");
     retry++;
-  }
+}
 
-  if (WiFi.status() != WL_CONNECTED) {
+if (WiFi.status() != WL_CONNECTED) {
     display.clearDisplay();
     display.setCursor(0, 0);
     display.print("WIFI FAILED!");
     display.setCursor(0, 15);
-    display.print("Restarting...");
+    display.print("Check Router/Pass");
     display.display();
     delay(3000);
-    ESP.restart(); 
-  } else {
-    // সফলভাবে কানেক্ট হলে
+    startCaptivePortal();
+} else {
     display.clearDisplay();
-    
-    //'হাসিখুশি' অভিব্যক্তি
-    drawLaughingExpression(); 
-
+    drawLaughingExpression();
     display.setCursor(0, 40);
     display.print("WIFI CONNECTED!");
     display.display();
-    
     delay(2000);
-  }
-
-
-
-    WiFi.mode(WIFI_STA);
-  delay(200);
-  WiFi.begin(stSSID.c_str(), stPass.c_str());
-
-  retry = 0;
-  // কানেকশনের জন্য ২০ সেকেন্ড সময় দিন (৪০ * ৫০০ms)
-  while (WiFi.status() != WL_CONNECTED && retry < 40) {
-    delay(500);
-    drawLoading(); 
-    Serial.print(".");
-    retry++;
-  }
+    // এরপর বাকি connected কোড চলবে...
+}
 
   if (WiFi.status() != WL_CONNECTED) {
     display.clearDisplay();
@@ -1006,7 +990,3 @@ void drawLaughingExpression() {
   display.fillRoundRect(56, 56, 16, 12, 6, WHITE); // জিহ্বা
   display.display();
 }
-
-
-
-    
