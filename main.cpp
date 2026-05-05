@@ -414,6 +414,7 @@ if (stSSID == "") {
   lastSleepCheck = millis();
   playBootSound(); 
 }
+}
 
 // ==========================================
 // --- ৪. মেইন লুপ ---
