@@ -36,6 +36,10 @@ void showWeatherPage();
 void showTimePage();
 void drawLoading();
 void drawAutoExpressions();
+void playSnoreSound();
+void detectGesture();
+void expressionRelax();
+
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
