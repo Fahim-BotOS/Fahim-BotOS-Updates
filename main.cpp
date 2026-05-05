@@ -55,6 +55,7 @@ void expressionRelax();
 #include <DNSServer.h>
 #include <Preferences.h>
 #include <ESPmDNS.h>
+#include <esp_wifi.h>
 
 // --- ওলেড ডিসপ্লে কনফিগারেশন ---
 #define SCREEN_WIDTH 128
@@ -397,38 +398,17 @@ void setup() {
     playBootSound(); // লোগো আসার সময় শব্দ হবে
     delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
 
-    // ওয়াইফাই ডেটা রিট্রাইভ করা
-    // OTA flag চেক করুন
-    preferences.begin("system", true);
-    bool otaDone = preferences.getBool("ota_done", false);
-    preferences.end();
-
-    if (otaDone) {
-        preferences.begin("system", false);
-        preferences.putBool("ota_done", false);
-        preferences.end();
-        
-        // OLED-এ দেখান
-        display.clearDisplay();
-        display.setCursor(0, 0);
-        display.print("OTA BOOT OK");
-        display.setCursor(0, 15);
-        display.print("WiFi Resetting...");
-        display.display();
-        delay(3000);
-    } else {
-        // OTA flag পাওয়া যায়নি
-        display.clearDisplay();
-        display.setCursor(0, 0);
-        display.print("NORMAL BOOT");
-        display.display();
-        delay(2000);
-    }
-
-    // WiFi chip সম্পূর্ণ রিসেট
+    // ওয়াইফাই ডেটা রিট্রাইভ
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("WiFi Starting...");
+    display.display();
+    
     WiFi.disconnect(true, true);
-    delay(1000);
+    delay(2000);          // ২ সেকেন্ড অপেক্ষা
     WiFi.mode(WIFI_OFF);
+    delay(2000);          // আরো ২ সেকেন্ড
+    esp_wifi_restore();   // WiFi chip সম্পূর্ণ factory reset
     delay(1000);
 
     preferences.begin("wifi-data", true);
