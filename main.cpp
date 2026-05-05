@@ -382,6 +382,7 @@ if (stSSID == "") {
     delay(2000);
   }
       // --- ওটিএ আপডেট চেক শুরু ---
+}
     display.clearDisplay();
     display.setCursor(0, 20);
     display.print("Checking Update...");
