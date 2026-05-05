@@ -1,6 +1,5 @@
 #include <HTTPUpdate.h>
 #include <Arduino.h>
-#include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 
 // ওটিএ লিঙ্ক
@@ -37,17 +36,12 @@ void showWeatherPage();
 void showTimePage();
 void drawLoading();
 void drawAutoExpressions();
-void playSnoreSound();
-void expressionRelax();
-void detectGesture();
-void drawZZZExpression();
-void drawLaughingExpression();
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <WiFi.h>
-#include <WebServer.h> 
+#include <WebServer.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <NTPClient.h>
@@ -65,76 +59,76 @@ void drawLaughingExpression();
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Adafruit_MPU6050 mpu;
-WebServer server(80); 
+WebServer server(80);
 DNSServer dnsServer;
 Preferences preferences;
 
 // --- পিক্সেল রোবট লোগো (৬৪x৬৪ পিক্সেল) ---
 const unsigned char PROGMEM pixel_logo [] = {
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x0f, 0xff, 0xe3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x43, 0xff, 0xc3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x63, 0xff, 0x83, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x71, 0xff, 0x13, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x78, 0xfe, 0x33, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x7c, 0xfc, 0x73, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc2, 0x7c, 0x78, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x86, 0x7e, 0x71, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x7e, 0x71, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1e, 0x7e, 0x23, 0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x3e, 0x7f, 0x07, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7e, 0x7f, 0x0f, 0xf2, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7c, 0x7f, 0x0f, 0xf2, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf8, 0x7f, 0x1f, 0xf3, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf8, 0x7e, 0x3f, 0xf3, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf0, 0x3e, 0x3f, 0xf3, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf2, 0x3c, 0x7f, 0xf3, 0x9f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe2, 0x3c, 0xff, 0xf3, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe2, 0x38, 0xff, 0xf0, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf3, 0xe6, 0x39, 0xff, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf3, 0xe6, 0x31, 0xff, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf3, 0xe6, 0x33, 0xff, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe6, 0x23, 0xff, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe6, 0x27, 0xc0, 0x00, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe2, 0x07, 0x80, 0x00, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf2, 0x0f, 0x0f, 0xff, 0x9f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf0, 0x0f, 0x1f, 0xff, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf0, 0x1f, 0x3f, 0xff, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0xf8, 0x1f, 0x3f, 0xfe, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7c, 0x1f, 0x3f, 0xfe, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x7e, 0x3f, 0x1f, 0xfc, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x3f, 0x0f, 0x8f, 0xfc, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x81, 0x83, 0xf8, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x8f, 0xe0, 0x03, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc7, 0xf8, 0x0f, 0xe3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe3, 0xff, 0xff, 0x87, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xff, 0xfe, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x1f, 0xf8, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x0f, 0xff, 0xe3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x43, 0xff, 0xc3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x63, 0xff, 0x83, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x71, 0xff, 0x13, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x78, 0xfe, 0x33, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x7c, 0xfc, 0x73, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc2, 0x7c, 0x78, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x86, 0x7e, 0x71, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0e, 0x7e, 0x71, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1e, 0x7e, 0x23, 0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x3e, 0x7f, 0x07, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7e, 0x7f, 0x0f, 0xf2, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7c, 0x7f, 0x0f, 0xf2, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf8, 0x7f, 0x1f, 0xf3, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf8, 0x7e, 0x3f, 0xf3, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf0, 0x3e, 0x3f, 0xf3, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf2, 0x3c, 0x7f, 0xf3, 0x9f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe2, 0x3c, 0xff, 0xf3, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe2, 0x38, 0xff, 0xf0, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf3, 0xe6, 0x39, 0xff, 0xf0, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf3, 0xe6, 0x31, 0xff, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf3, 0xe6, 0x33, 0xff, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe6, 0x23, 0xff, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe6, 0x27, 0xc0, 0x00, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf1, 0xe2, 0x07, 0x80, 0x00, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf2, 0x0f, 0x0f, 0xff, 0x9f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf9, 0xf0, 0x0f, 0x1f, 0xff, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0xf0, 0x1f, 0x3f, 0xff, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0xf8, 0x1f, 0x3f, 0xfe, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7c, 0x1f, 0x3f, 0xfe, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x7e, 0x3f, 0x1f, 0xfc, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x3f, 0x0f, 0x8f, 0xfc, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x81, 0x83, 0xf8, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x8f, 0xe0, 0x03, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc7, 0xf8, 0x0f, 0xe3, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe3, 0xff, 0xff, 0x87, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf0, 0xff, 0xfe, 0x0f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x1f, 0xf8, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 };
 
 // --- নেটওয়ার্ক ও এপিআই সেটিংস ---
@@ -146,14 +140,14 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 21600); // GMT+6
 
 // --- হার্ডওয়্যার পিন কনফিগারেশন ---
-const int TOUCH_PIN = 2; 
+const int TOUCH_PIN = 2;
 const int BUZZER_PIN = 3;
 
 // --- গ্লোবাল ভ্যারিয়েবল ---
 String stSSID = "";
 String stPass = "";
 bool startSmartConfig = false;
-int currentPage = 0; 
+int currentPage = 0;
 String currentLocation = "Unknown";
 String weatherTemp = "--";
 String weatherDesc = "Clear";
@@ -161,7 +155,7 @@ String humidity = "--";
 String windSpeed = "--";
 
 unsigned long lastWeatherUpdate = 0;
-unsigned long lastPageChange = 0; 
+unsigned long lastPageChange = 0;
 
 int pupilX = 0;
 int pupilY = 0;
@@ -173,7 +167,7 @@ unsigned long touchStartTime = 0;
 bool isTouching = false;
 unsigned long lastSleepCheck = 0;
 unsigned long moodEndTime = 0;
-int currentMood = 0; 
+int currentMood = 0;
 bool isMoving = false;
 int touchCount = 0; // টাচ গণনার জন্য
 unsigned long lastTouchTime = 0; // কতক্ষণ আগে টাচ করা হয়েছে
@@ -183,62 +177,69 @@ unsigned long lastTouchTime = 0; // কতক্ষণ আগে টাচ ক�
 // ==========================================
 
 String getSetupHTML() {
-  String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'>";
-  html += "<style>body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #1a1a2e; color: white; padding: 30px; }";
-  html += ".box { background: #16213e; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }";
-  html += "input { width: 90%; padding: 12px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; }";
-  html += "button { background: #e94560; color: white; padding: 15px; width: 95%; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; transition: 0.3s; }";
-  html += "button:hover { background: #ff4d6d; } h2 { margin-bottom: 20px; }</style></head><body>";
-  html += "<div class='box'><h2>PIXEL ROBOT</h2><p>Connect to your Home WiFi</p>";
-  html += "<form action='/save' method='POST'>";
-  html += "<input type='text' name='ssid' placeholder='WiFi Name (SSID)' required><br>";
-  html += "<input type='password' name='pass' placeholder='Password' required><br>";
-  html += "<button type='submit'>SAVE & CONNECT</button></form></div></body></html>";
-  return html;
+    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<style>body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #1a1a2e; color: white; padding: 30px; }";
+    html += ".box { background: #16213e; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }";
+    html += "input { width: 90%; padding: 12px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; }";
+    html += "button { background: #e94560; color: white; padding: 15px; width: 95%; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; transition: 0.3s; }";
+    html += "button:hover { background: #ff4d6d; } h2 { margin-bottom: 20px; }</style></head><body>";
+    html += "<div class='box'><h2>PIXEL ROBOT</h2><p>Connect to your Home WiFi</p>";
+    html += "<form action='/save' method='POST'>";
+    html += "<input type='text' name='ssid' placeholder='WiFi Name (SSID)' required><br>";
+    html += "<input type='password' name='pass' placeholder='Password' required><br>";
+    html += "<button type='submit'>SAVE & CONNECT</button></form></div></body></html>";
+    return html;
 }
 
 void handleSave() {
-  stSSID = server.arg("ssid");
-  stPass = server.arg("pass");
+    stSSID = server.arg("ssid");
+    stPass = server.arg("pass");
 
-  // আগে সেভ করুন
-  preferences.begin("wifi-data", false);
-  preferences.putString("ssid", stSSID);
-  preferences.putString("pass", stPass);
-  preferences.end();
+    // আগে সেভ করুন
+    preferences.begin("wifi-data", false);
+    preferences.putString("ssid", stSSID);
+    preferences.putString("pass", stPass);
+    preferences.end();
 
-  // তারপর response পাঠান
-  server.send(200, "text/html", "<h2>Setup Saved!</h2><p>Pixel is restarting...</p>");
-  
-  delay(1000);
-  ESP.restart();
+    // তারপর response পাঠান
+    server.send(200, "text/html", "<h2>Setup Saved!</h2><p>Pixel is restarting...</p>");
+
+    delay(1000);
+    ESP.restart();
 }
 
 
 void startCaptivePortal() {
-  WiFi.mode(WIFI_AP);
-  WiFi.softAP(apSSID); // পাসওয়ার্ড ছাড়া ওপেন নেটওয়ার্ক
-  dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-  
-  server.on("/", []() { server.send(200, "text/html", getSetupHTML()); });
-  server.on("/save", HTTP_POST, handleSave);
-  server.onNotFound([]() { server.send(200, "text/html", getSetupHTML()); });
-  server.begin();
-  
-  while(true) {
-    dnsServer.processNextRequest();
-    server.handleClient();
-    
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setCursor(25, 10); display.print("SETUP MODE");
-    display.drawLine(0, 20, 128, 20, WHITE);
-    display.setCursor(5, 35); display.print("Connect WiFi: ");
-    display.setCursor(5, 50); display.print(apSSID); // Pixel_Robot_Setup দেখাবে
-    display.display();
-    delay(10);
-  }
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(apSSID); // পাসওয়ার্ড ছাড়া ওপেন নেটওয়ার্ক
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+
+    server.on("/", []() {
+        server.send(200, "text/html", getSetupHTML());
+    });
+    server.on("/save", HTTP_POST, handleSave);
+    server.onNotFound([]() {
+        server.send(200, "text/html", getSetupHTML());
+    });
+    server.begin();
+
+    while(true) {
+        dnsServer.processNextRequest();
+        server.handleClient();
+
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(25, 10);
+        display.print("SETUP MODE");
+        display.drawLine(0, 20, 128, 20, WHITE);
+        display.setCursor(5, 35);
+        display.print("Connect WiFi: ");
+        display.setCursor(5, 50);
+        display.print(apSSID); // Pixel_Robot_Setup দেখাবে
+        display.display();
+        delay(10);
+    }
 }
 
 
@@ -248,247 +249,201 @@ void startCaptivePortal() {
 // ==========================================
 
 void fetchSmartWeather() {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin("http://ip-api.com/json/");
-    if (http.GET() > 0) {
-      StaticJsonDocument<512> locDoc;
-      deserializeJson(locDoc, http.getString());
-      currentLocation = locDoc["city"].as<String>();
-    }
-    http.end();
+    if (WiFi.status() == WL_CONNECTED) {
+        HTTPClient http;
+        http.begin("http://ip-api.com/json/");
+        if (http.GET() > 0) {
+            StaticJsonDocument<512> locDoc;
+            deserializeJson(locDoc, http.getString());
+            currentLocation = locDoc["city"].as<String>();
+        }
+        http.end();
 
-    String url = "http://api.openweathermap.org/data/2.5/weather?q=" + currentLocation + "&appid=" + String(OWKEY) + "&units=metric";
-    http.begin(url);
-    if (http.GET() > 0) {
-      StaticJsonDocument<1024> doc;
-      deserializeJson(doc, http.getString());
-      weatherTemp = String((int)doc["main"]["temp"]);
-      humidity = String((int)doc["main"]["humidity"]);
-      windSpeed = String((float)doc["wind"]["speed"]);
-      weatherDesc = doc["weather"][0]["main"].as<String>();
+        String url = "http://api.openweathermap.org/data/2.5/weather?q=" + currentLocation + "&appid=" + String(OWKEY) + "&units=metric";
+        http.begin(url);
+        if (http.GET() > 0) {
+            StaticJsonDocument<1024> doc;
+            deserializeJson(doc, http.getString());
+            weatherTemp = String((int)doc["main"]["temp"]);
+            humidity = String((int)doc["main"]["humidity"]);
+            windSpeed = String((float)doc["wind"]["speed"]);
+            weatherDesc = doc["weather"][0]["main"].as<String>();
+        }
+        http.end();
     }
-    http.end();
-  }
 }
 
 // --- অ্যাপ কন্ট্রোল হ্যান্ডলার ---
 
 void handleNormal() {
-  currentMood = 0; moodEndTime = 0; 
-  server.send(200, "text/plain", "Normal Mode Active");
+    currentMood = 0;
+    moodEndTime = 0;
+    server.send(200, "text/plain", "Normal Mode Active");
 }
 
 void handleDizzy() {
-  currentMood = 4; moodEndTime = millis() + 5000; 
-  playDizzySound(); server.send(200, "text/plain", "Dizzy Mode Active");
+    currentMood = 4;
+    moodEndTime = millis() + 5000;
+    playDizzySound();
+    server.send(200, "text/plain", "Dizzy Mode Active");
 }
 
 void handleAngry() {
-  currentMood = 7; moodEndTime = millis() + 5000; 
-  playAngrySound(); server.send(200, "text/plain", "Angry Mode Active");
+    currentMood = 7;
+    moodEndTime = millis() + 5000;
+    playAngrySound();
+    server.send(200, "text/plain", "Angry Mode Active");
 }
 
 void handleSleep() {
-  currentMood = 5; lastSleepCheck = millis(); 
-  playSleepSound(); server.send(200, "text/plain", "Sleep Mode Active");
+    currentMood = 5;
+    lastSleepCheck = millis();
+    playSleepSound();
+    server.send(200, "text/plain", "Sleep Mode Active");
 }
+
+void check_for_updates() {
+    display.clearDisplay();
+    display.setCursor(10, 20);
+    display.print("Checking Update...");
+    display.display();
+
+    WiFiClientSecure *client = new WiFiClientSecure;
+    if(client) {
+        client->setInsecure(); // SSL সার্টিফিকেট এরর এড়ানোর জন্য
+        t_httpUpdate_return ret = httpUpdate.update(*client, firmware_url);
+
+        if (ret == HTTP_UPDATE_OK) {
+            Serial.println("Update success!"); // সাকসেস হলে অটো রিস্টার্ট হবে
+        } else {
+            // আপডেট না থাকলে বা ফেইল করলে ২ সেকেন্ড দেখাবে
+            display.clearDisplay();
+            display.setCursor(10, 20);
+            display.print("No New Update");
+            display.display();
+            delay(2000);
+        }
+        delete client;
+    }
+}
+
 
 // ==========================================
 // --- ৩. সেটআপ ফাংশন ---
 // ==========================================
 
 void setup() {
-  Serial.begin(115200);
-  pinMode(TOUCH_PIN, INPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
+    Serial.begin(115200);
+    pinMode(TOUCH_PIN, INPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
 
-  // ডিসপ্লে চেক
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); 
-  }
-  
-  // সেন্সর ইনিশিয়ালাইজেশন
-  mpu.begin();
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+    if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+        for(;;);
+    }
+    mpu.begin();
+    mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+    mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+    mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 
-  display.clearDisplay();
-  display.setTextColor(WHITE);
+    display.clearDisplay();
+    display.setTextColor(WHITE);
 
-  // --- বুট লোগো প্রদর্শন (একবার) ---
-  display.clearDisplay();
-  // লোগোটি স্ক্রিনের মাঝখানে দেখাবে
-  display.drawBitmap(0, 0, pixel_logo, 128, 64, WHITE); 
-  display.display();
-  
-  playBootSound(); // লোগো আসার সময় একবার শব্দ হবে
-  delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
-  // --- বুট লোগো প্রদর্শন শেষ ---
-  
-    // --- ওয়াইফাই ডাটা রিট্রাইভ করা ---
-    // --- ওয়াইফাই ডাটা রিট্রাইভ করা ---
-  preferences.begin("wifi-data", true); 
-  stSSID = preferences.getString("ssid", "");
-  stPass = preferences.getString("pass", "");
-  preferences.end();
+    // --- বুট লোগো প্রদর্শন শুরু ---
+    display.clearDisplay();
 
-  Serial.println("Stored SSID: [" + stSSID + "]");
-  
-// Line 340 থেকে শুরু
-if (stSSID == "" || startSmartConfig) {
-    // SmartConfig মোড
-    preferences.begin("wifi-data", false);
-    preferences.clear();
-    preferences.end();
+    // লোগোটি পুরো স্ক্রিন জুড়ে (০, ০) পজিশন থেকে দেখাবে
+    display.drawBitmap(0, 0, pixel_logo, 128, 64, WHITE);
+    display.display();
 
+    playBootSound(); // লোগো আসার সময় শব্দ হবে
+    delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
+    // --- বুট লোগো প্রদর্শন শেষ ---
+
+
+    playBootSound(); // লোগো আসার সময় শব্দ হবে
+    delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
+
+    // ওয়াইফাই ডেটা রিট্রাইভ করা
+    // ওয়াইফাই ডেটা রিট্রাইভ করা
     WiFi.disconnect(true);
-    WiFi.mode(WIFI_AP_STA);
+    WiFi.mode(WIFI_OFF);
     delay(500);
 
-    drawZZZExpression();
-    WiFi.beginSmartConfig();
-
-    while (!WiFi.smartConfigDone()) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("\nSmartConfig Done!");
-
-    // ✅ সেভ করো
-    stSSID = WiFi.SSID();
-    stPass = WiFi.psk();
-    preferences.begin("wifi-data", false);
-    preferences.putString("ssid", stSSID);
-    preferences.putString("pass", stPass);
+    preferences.begin("wifi-data", true);
+    stSSID = preferences.getString("ssid", "");
+    stPass = preferences.getString("pass", "");
     preferences.end();
-}
 
-// ✅ একবারই কানেক্ট
-WiFi.mode(WIFI_STA);
-delay(200);
-WiFi.begin(stSSID.c_str(), stPass.c_str());
+    Serial.println("SSID: [" + stSSID + "]");
+    Serial.println("PASS: [" + stPass + "]");
 
-int retry = 0;
-while (WiFi.status() != WL_CONNECTED && retry < 40) {
-    delay(500);
-    drawLoading();
-    Serial.print(".");
-    retry++;
-}
-
-if (WiFi.status() != WL_CONNECTED) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("WIFI FAILED!");
-    display.setCursor(0, 15);
-    display.print("Check Router/Pass");
-    display.display();
-    delay(3000);
-    startCaptivePortal();
-} else {
-    display.clearDisplay();
-    drawLaughingExpression();
-    display.setCursor(0, 40);
-    display.print("WIFI CONNECTED!");
-    display.display();
-    delay(2000);
-    // এরপর বাকি connected কোড চলবে...
-}
-
-  if (WiFi.status() != WL_CONNECTED) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("WIFI FAILED!");
-    display.setCursor(0, 15);
-    display.print("Check Router/Pass");
-    display.display();
-    delay(3000);
-
-    // গুরুত্বপূর্ণ পরিবর্তন: preferences.clear() সরিয়ে দেওয়া হয়েছে।
-    // যাতে পাসওয়ার্ড ভুল না হলে অটোমেটিক পরে কানেক্ট হতে পারে।
-    
-    startCaptivePortal(); // শুধু পোর্টালে যাবে, ডাটা মুছবে না
-  } else {
-    // সফলভাবে কানেক্ট হলে
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setCursor(0, 20);
-    display.print("WIFI CONNECTED!");
-    display.setCursor(0, 40);
-    display.print("IP: "); 
-    display.print(WiFi.localIP().toString());
-    display.display();
-    delay(2000);
-
-    // --- ওটিএ আপডেট চেক শুরু ---
-    display.clearDisplay();
-    display.setCursor(0, 20);
-    display.print("Checking Update...");
-    display.display();
-
-    WiFiClientSecure* client = new WiFiClientSecure;
-    client->setInsecure(); // GitHub এর জন্য SSL ভেরিফিকেশন এড়ানো
-    httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-    
-    // আপডেট কল করা
-    t_httpUpdate_return ret = httpUpdate.update(*client, firmware_url);
-    
-    if (ret == HTTP_UPDATE_FAILED) {
-        Serial.printf("Auto-update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-        display.setCursor(0, 40);
-        display.print("Update Skip/Fail");
+    if (stSSID == "") {
+        startCaptivePortal();
+    } else {
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setCursor(0, 0);
+        display.print("SSID:");
+        display.setCursor(0, 15);
+        display.print(stSSID);
         display.display();
-        delay(1000);
-    }
-    delete client;
-    // --- ওটিএ আপডেট চেক শেষ ---
+        delay(2000);
 
-    // MDNS সেটআপ (যাতে ব্রাউজারে http://pixel.local লিখে ঢোকা যায়)
-    if (MDNS.begin("pixel")) { 
-      Serial.println("MDNS responder started");
+        WiFi.mode(WIFI_STA);
+        delay(200);
+        WiFi.begin(stSSID.c_str(), stPass.c_str());
+
+        int retry = 0;
+        while (WiFi.status() != WL_CONNECTED && retry < 40) {
+            delay(500);
+            drawLoading();
+            retry++;
+        }
+
+        if (WiFi.status() != WL_CONNECTED) {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.print("WIFI FAILED!");
+            display.setCursor(0, 15);
+            display.print(stSSID);
+            display.setCursor(0, 30);
+            display.print(stPass);
+            display.display();
+            delay(3000);
+            preferences.begin("wifi-data", false);
+            preferences.clear();
+            preferences.end();
+            startCaptivePortal();
+        } else {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.print("CONNECTED!");
+            display.display();
+            delay(2000);
+        }
     }
 
-    // ওয়েব সার্ভার রুট কনফিগারেশন
+
+    if (MDNS.begin("pixel")) { // এখানে "pixel" হলো আপনার রোবটের নাম
+        Serial.println("MDNS responder started");
+        // ব্রাউজারে এখন আপনি http://pixel.local লিখে ঢুকতে পারবেন
+    }
+
     server.on("/normal", handleNormal);
     server.on("/dizzy", handleDizzy);
     server.on("/angry", handleAngry);
     server.on("/sleep", handleSleep);
-    
-    // ম্যানুয়াল আপডেট রুট
-    server.on("/update", []() {
-      server.send(200, "text/plain", "Robot is Updating... Please wait.");
-      delay(500);
-
-      // OTA এর আগে নিশ্চিতভাবে credentials সেভ করা
-      preferences.begin("wifi-data", false);
-      preferences.putString("ssid", stSSID);
-      preferences.putString("pass", stPass);
-      preferences.end();
-      delay(200); 
-
-      WiFiClientSecure* updateClient = new WiFiClientSecure;
-      updateClient->setInsecure();
-      httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-      
-      t_httpUpdate_return manualRet = httpUpdate.update(*updateClient, firmware_url);
-      
-      if (manualRet == HTTP_UPDATE_FAILED) {
-          Serial.printf("Manual Update Failed: %s\n", httpUpdate.getLastErrorString().c_str());
-      }
-      delete updateClient;
-    });
-
     server.begin();
+if (WiFi.status() == WL_CONNECTED) {
+    check_for_updates(); // আপনার ওটিএ ফাংশনটি কল হবে
+
+    // এরপর সার্ভিসগুলো শুরু হবে
     timeClient.begin();
     fetchSmartWeather();
     lastSleepCheck = millis();
-    playBootSound(); 
-    
-  } // ← else শেষ (WiFi connected ব্লক)// ← outer else শেষ (stSSID != "" ব্লক)
-} // ← setup() শেষ
+    playBootSound();
+ }
+}
 
 
 // ==========================================
@@ -496,497 +451,538 @@ if (WiFi.status() != WL_CONNECTED) {
 // ==========================================
 
 void loop() {
-  server.handleClient(); 
-  unsigned long currentMillis = millis();
-  timeClient.update();
-  
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
+    server.handleClient();
+    unsigned long currentMillis = millis();
+    timeClient.update();
 
-  // --- ১. টাচ সেন্সর লজিক ---
-  // --- উন্নত টাচ লজিক ---
-int touchState = digitalRead(TOUCH_PIN);
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
 
-if (touchState == HIGH) {
-  if (!isTouching) { 
-    touchStartTime = millis(); // টাচ শুরু হওয়ার সময়
-    isTouching = true;
-    touchCount++;
-    lastTouchTime = millis();
-  }
-  
-  unsigned long duration = millis() - touchStartTime;
+    // --- ১. টাচ সেন্সর লজিক ---
+    // --- উন্নত টাচ লজিক ---
+    int touchState = digitalRead(TOUCH_PIN);
 
-  // শর্ত ১: একটানা ৩ সেকেন্ডের বেশি হাত বুলালে (Relax Mode)
-  if (duration > 3000 && duration < 10000) {
-    currentMood = 10; // আমরা ১০ নম্বর মুড হিসেবে Relax সেট করছি
-    moodEndTime = millis() + 500; // হাত বুলানো অবস্থায় মুড থাকবে
-  } 
-  // শর্ত ২: একটানা ১০ সেকেন্ড টাচ করে রাখলে (Sleep Mode)
-  else if (duration >= 10000) {
-    currentMood = 5; // Sleep Mode
-    moodEndTime = millis() + 10000;
-  }
-} else {
-  if (isTouching) {
-    unsigned long finalDuration = millis() - touchStartTime;
-    
-    // শর্ত ৩: খুব হালকা টাচ (১০০ ms এর কম) করলে Sad মুড
-    if (finalDuration < 100) {
-      currentMood = 1; // Sad Mode
-      moodEndTime = millis() + 2000;
+    if (touchState == HIGH) {
+        if (!isTouching) {
+            touchStartTime = millis(); // টাচ শুরু হওয়ার সময়
+            isTouching = true;
+            touchCount++;
+            lastTouchTime = millis();
+        }
+
+        unsigned long duration = millis() - touchStartTime;
+
+        // শর্ত ১: একটানা ৩ সেকেন্ডের বেশি হাত বুলালে (Relax Mode)
+        if (duration > 3000 && duration < 10000) {
+            currentMood = 10; // আমরা ১০ নম্বর মুড হিসেবে Relax সেট করছি
+            moodEndTime = millis() + 500; // হাত বুলানো অবস্থায় মুড থাকবে
+        }
+        // শর্ত ২: একটানা ১০ সেকেন্ড টাচ করে রাখলে (Sleep Mode)
+        else if (duration >= 10000) {
+            currentMood = 5; // Sleep Mode
+            moodEndTime = millis() + 10000;
+        }
+    } else {
+        if (isTouching) {
+            unsigned long finalDuration = millis() - touchStartTime;
+
+            // শর্ত ৩: খুব হালকা টাচ (১০০ ms এর কম) করলে Sad মুড
+            if (finalDuration < 100) {
+                currentMood = 1; // Sad Mode
+                moodEndTime = millis() + 2000;
+            }
+            isTouching = false;
+        }
     }
-    isTouching = false;
-  }
-}
 
 // ৩ বার দ্রুত টাচ করলে ভেংচি (আগের লজিক)
-if (touchCount == 3 && (millis() - lastTouchTime < 1500)) {
-  currentMood = 9; 
-  moodEndTime = millis() + 4000;
-  touchCount = 0;
-}
+    if (touchCount == 3 && (millis() - lastTouchTime < 1500)) {
+        currentMood = 9;
+        moodEndTime = millis() + 4000;
+        touchCount = 0;
+    }
 
 // --- ২. মুভমেন্ট ও তালি শনাক্তকরণ লজিক ---
-detectGesture(); 
+    detectGesture();
 
 
-  // তালি (Clap) বা ইমপ্যাক্ট শনাক্তকরণ
-  float zDifference = abs(a.acceleration.z - 9.81); 
-  if (zDifference > 3.8) { 
-    if (currentMood == 5) { 
-      currentMood = 0; 
-      playTone(1200, 100); 
-      lastSleepCheck = currentMillis; 
-    } 
-    else { 
-      currentMood = 8;        
-      playScaredSound();     
-      moodEndTime = currentMillis + 3500; 
-      lastSleepCheck = currentMillis; 
+    // তালি (Clap) বা ইমপ্যাক্ট শনাক্তকরণ
+    float zDifference = abs(a.acceleration.z - 9.81);
+    if (zDifference > 3.8) {
+        if (currentMood == 5) {
+            currentMood = 0;
+            playTone(1200, 100);
+            lastSleepCheck = currentMillis;
+        }
+        else {
+            currentMood = 8;
+            playScaredSound();
+            moodEndTime = currentMillis + 3500;
+            lastSleepCheck = currentMillis;
+        }
     }
-  }
 
-  if (abs(g.gyro.x) > 0.5 || abs(g.gyro.y) > 0.5 || abs(g.gyro.z) > 0.5) {
-    if (!isMoving) playMoveSound();
-    isMoving = true; lastLookTime = 0; lastSleepCheck = currentMillis; 
-  } else { isMoving = false; }
-
-  // --- ৩. পেজ ও মুড টাইমিং ---
-  if (currentMood == 0 || currentMillis > moodEndTime) {
-    if (currentMood != 0 && currentMood != 5) currentMood = 0;
-    if (!isMoving && !isTouching) {
-      unsigned long timeInPage = currentMillis - lastPageChange;
-      if (currentPage == 0 && timeInPage > 6000) { currentPage = 2; lastPageChange = currentMillis; } 
-      else if (currentPage == 2 && timeInPage > 3000) { currentPage = 1; lastPageChange = currentMillis; } 
-      else if (currentPage == 1 && timeInPage > 6000) { currentPage = 0; lastPageChange = currentMillis; }
-    } else { currentPage = 0; lastPageChange = currentMillis; }
-  }
-
-  // --- ৪. স্লিপ ও আপডেট লজিক ---
-  if (currentMillis - lastSleepCheck > 600000) { if (currentMood != 5) playSleepSound(); currentMood = 5; }
-  if (currentMillis - lastWeatherUpdate > 600000) { fetchSmartWeather(); lastWeatherUpdate = currentMillis; }
-
-  if (currentMillis - lastBlinkTime > random(3000, 6000)) { isBlinking = true; lastBlinkTime = currentMillis; }
-  if (isBlinking && currentMillis - lastBlinkTime > 150) isBlinking = false;
-
-  // --- ৫. রেন্ডারিং ---
-  display.clearDisplay();
-  static unsigned long lastSnoreTime = 0; 
-
-  if (currentMood == 5) { // যদি রোবট স্লিপ মোডে থাকে
-    drawMood(5); // ঘুমের অভিব্যক্তি দেখাবে
-    
-    if (currentMillis - lastSnoreTime > 6000) { // প্রতি ৬ সেকেন্ড পর পর
-      playSnoreSound(); 
-      lastSnoreTime = currentMillis;
+    if (abs(g.gyro.x) > 0.5 || abs(g.gyro.y) > 0.5 || abs(g.gyro.z) > 0.5) {
+        if (!isMoving) playMoveSound();
+        isMoving = true;
+        lastLookTime = 0;
+        lastSleepCheck = currentMillis;
+    } else {
+        isMoving = false;
     }
-  } 
-  else if (currentMillis < moodEndTime) { 
-    drawMood(currentMood); 
-  } 
-  else {
-    if (currentPage == 0) drawAutoExpressions(); 
-    else if (currentPage == 1) showWeatherPage();
-    else if (currentPage == 2) showTimePage();
-  }
 
-  display.display(); // এটি আগে থেকেই আপনার কোডে আছে
-  delay(30);         // এটিও আগে থেকেই আছে
+    // --- ৩. পেজ ও মুড টাইমিং ---
+    if (currentMood == 0 || currentMillis > moodEndTime) {
+        if (currentMood != 0 && currentMood != 5) currentMood = 0;
+        if (!isMoving && !isTouching) {
+            unsigned long timeInPage = currentMillis - lastPageChange;
+            if (currentPage == 0 && timeInPage > 6000) {
+                currentPage = 2;
+                lastPageChange = currentMillis;
+            }
+            else if (currentPage == 2 && timeInPage > 3000) {
+                currentPage = 1;
+                lastPageChange = currentMillis;
+            }
+            else if (currentPage == 1 && timeInPage > 6000) {
+                currentPage = 0;
+                lastPageChange = currentMillis;
+            }
+        } else {
+            currentPage = 0;
+            lastPageChange = currentMillis;
+        }
+    }
+
+    // --- ৪. স্লিপ ও আপডেট লজিক ---
+    if (currentMillis - lastSleepCheck > 600000) {
+        if (currentMood != 5) playSleepSound();
+        currentMood = 5;
+    }
+    if (currentMillis - lastWeatherUpdate > 600000) {
+        fetchSmartWeather();
+        lastWeatherUpdate = currentMillis;
+    }
+
+    if (currentMillis - lastBlinkTime > random(3000, 6000)) {
+        isBlinking = true;
+        lastBlinkTime = currentMillis;
+    }
+    if (isBlinking && currentMillis - lastBlinkTime > 150) isBlinking = false;
+
+    // --- ৫. রেন্ডারিং ---
+    if (currentMillis < moodEndTime || currentMood == 5) {
+    if (currentMood == 5) {
+        playSnoreSound(); // নাক ডাকার শব্দ এখানে ডাকবে
+    }
+    drawMood(currentMood);
+}
+
+    else {
+        if (currentPage == 0) drawAutoExpressions();
+        else if (currentPage == 1) showWeatherPage();
+        else if (currentPage == 2) showTimePage();
+    }
+    display.display();
+    delay(30);
 }
 
 // --- সাউন্ড ও গ্রাফিক্স ফাংশনসমূহ (বিস্তারিত) ---
 
 void playTone(int frequency, int duration) {
-  long delayValue = 1000000 / frequency / 2;
-  long numCycles = frequency * duration / 1000;
-  for (long i = 0; i < numCycles; i++) {
-    digitalWrite(BUZZER_PIN, HIGH); delayMicroseconds(delayValue);
-    digitalWrite(BUZZER_PIN, LOW); delayMicroseconds(delayValue);
-  }
+    long delayValue = 1000000 / frequency / 2;
+    long numCycles = frequency * duration / 1000;
+    for (long i = 0; i < numCycles; i++) {
+        digitalWrite(BUZZER_PIN, HIGH);
+        delayMicroseconds(delayValue);
+        digitalWrite(BUZZER_PIN, LOW);
+        delayMicroseconds(delayValue);
+    }
 }
 
-void playBootSound() { playTone(1000, 100); delay(50); playTone(1500, 200); }
-void playSadSound() { for (int hz = 600; hz > 200; hz -= 10) playTone(hz, 25); delay(100); playTone(180, 600); }
-void playLoveSound() { playTone(1200, 150); delay(50); playTone(1500, 150); delay(50); playTone(2000, 300); }
-void playAngrySound() { for(int i=0; i<5; i++) { playTone(200, 100); delay(50); } }
-void playDizzySound() { for (int hz = 400; hz < 1200; hz += 40) playTone(hz, 10); for (int hz = 1200; hz > 400; hz -= 40) playTone(hz, 10); }
-void playSleepSound() { for (int hz = 150; hz < 350; hz += 10) playTone(hz, 25); delay(100); for (int hz = 300; hz > 120; hz -= 8) playTone(hz, 40); }
-void playScaredSound() { for(int i=0; i<8; i++) { playTone(random(800, 1800), 40); delay(20); } }
-void playMoveSound() { for (int hz = 1200; hz < 1800; hz += 100) playTone(hz, 5); for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5); }
+void playBootSound() {
+    playTone(1000, 100);
+    delay(50);
+    playTone(1500, 200);
+}
+void playSadSound() {
+    for (int hz = 600; hz > 200; hz -= 10) playTone(hz, 25);
+    delay(100);
+    playTone(180, 600);
+}
+void playLoveSound() {
+    playTone(1200, 150);
+    delay(50);
+    playTone(1500, 150);
+    delay(50);
+    playTone(2000, 300);
+}
+void playAngrySound() {
+    for(int i=0; i<5; i++) {
+        playTone(200, 100);
+        delay(50);
+    }
+}
+void playDizzySound() {
+    for (int hz = 400; hz < 1200; hz += 40) playTone(hz, 10);
+    for (int hz = 1200; hz > 400; hz -= 40) playTone(hz, 10);
+}
+void playSleepSound() {
+    for (int hz = 150; hz < 350; hz += 10) playTone(hz, 25);
+    delay(100);
+    for (int hz = 300; hz > 120; hz -= 8) playTone(hz, 40);
+}
+void playScaredSound() {
+    for(int i=0; i<8; i++) {
+        playTone(random(800, 1800), 40);
+        delay(20);
+    }
+}
+void playMoveSound() {
+    for (int hz = 1200; hz < 1800; hz += 100) playTone(hz, 5);
+    for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5);
+}
+
+void playSnoreSound() {
+    // নাক ডাকার শব্দের মতো একটি ইফেক্ট (কম ফ্রিকোয়েন্সি থেকে বেশি)
+    for (int i = 150; i < 250; i += 5) {
+        tone(BUZZER_PIN, i);
+        delay(20);
+    }
+    for (int i = 250; i > 150; i -= 5) {
+        tone(BUZZER_PIN, i);
+        delay(20);
+    }
+    noTone(BUZZER_PIN); // শব্দ বন্ধ
+}
+
+
 
 void drawMood(int mood) {
-  switch(mood) {
-    case 1: expressionSad(); break;
-    case 2: expressionLove(); break;
-    case 4: expressionDizzy(); break;
-    case 5: expressionSleepy(); break;
-    case 7: expressionSuperAngry(); break;
-    case 8: expressionSkeptical(); break; 
-    case 9: expressionVebchi(); break;
-    case 10: expressionRelax(); break;
-  }
+    switch(mood) {
+    case 1:
+        expressionSad();
+        break;
+    case 2:
+        expressionLove();
+        break;
+    case 4:
+        expressionDizzy();
+        break;
+    case 5:
+        expressionSleepy();
+        break;
+    case 7:
+        expressionSuperAngry();
+        break;
+    case 8:
+        expressionSkeptical();
+        break;
+    case 9:
+        expressionVebchi();
+        break;
+    case 10:
+        expressionRelax();
+        break;
+    }
 }
 
 
 
 void expressionSkeptical() {
-  display.clearDisplay();
+    display.clearDisplay();
 
-  // ১. বাম চোখ (একটু বড় এবং সন্দেহজনকভাবে তাকিয়ে থাকা)
-  display.fillRoundRect(25, 25, 30, 25, 8, WHITE);
-  // মণি - যা ডানে এবং বামে হালকা নড়াচড়া করবে (সন্দেহ করার মতো)
-  int lookOffset = (millis() / 1000) % 2 == 0 ? 2 : -2; 
-  display.fillCircle(40 + lookOffset, 37, 5, BLACK); 
+    // ১. বাম চোখ (একটু বড় এবং সন্দেহজনকভাবে তাকিয়ে থাকা)
+    display.fillRoundRect(25, 25, 30, 25, 8, WHITE);
+    // মণি - যা ডানে এবং বামে হালকা নড়াচড়া করবে (সন্দেহ করার মতো)
+    int lookOffset = (millis() / 1000) % 2 == 0 ? 2 : -2;
+    display.fillCircle(40 + lookOffset, 37, 5, BLACK);
 
-  // ২. ডান চোখ (সরু বা ছোট করা চোখ - এটিই স্কেপটিক্যাল লুক দেয়)
-  // চোখটি একটু উপরে উঠানো থাকবে
-  display.fillRoundRect(73, 20, 30, 15, 4, WHITE);
-  display.fillCircle(88 + lookOffset, 27, 4, BLACK);
+    // ২. ডান চোখ (সরু বা ছোট করা চোখ - এটিই স্কেপটিক্যাল লুক দেয়)
+    // চোখটি একটু উপরে উঠানো থাকবে
+    display.fillRoundRect(73, 20, 30, 15, 4, WHITE);
+    display.fillCircle(88 + lookOffset, 27, 4, BLACK);
 
-  // ৩. সন্দেহজনক মুখ (একটি বাঁকা লাইন যা কাঁপবে)
-  int mouthWiggle = (millis() % 200 > 100) ? 1 : 0;
-  display.drawLine(54, 52 + mouthWiggle, 74, 52 - mouthWiggle, WHITE);
-  
-  // ৪. একটি ছোট্ট ঘাম বা দুশ্চিন্তার বিন্দু (Sweat drop) - যা কিউটনেস বাড়াবে
-  if ((millis() / 2000) % 2 == 0) {
-    display.fillCircle(110, 15, 2, WHITE);
-    display.drawLine(110, 13, 110, 10, WHITE);
-  }
+    // ৩. সন্দেহজনক মুখ (একটি বাঁকা লাইন যা কাঁপবে)
+    int mouthWiggle = (millis() % 200 > 100) ? 1 : 0;
+    display.drawLine(54, 52 + mouthWiggle, 74, 52 - mouthWiggle, WHITE);
 
-  display.display();
+    // ৪. একটি ছোট্ট ঘাম বা দুশ্চিন্তার বিন্দু (Sweat drop) - যা কিউটনেস বাড়াবে
+    if ((millis() / 2000) % 2 == 0) {
+        display.fillCircle(110, 15, 2, WHITE);
+        display.drawLine(110, 13, 110, 10, WHITE);
+    }
+
+    display.display();
 }
 
 
 void expressionDizzy() {
-  display.clearDisplay();
-  
-  // ১. কিউট ঘোরানো চোখ (Spiral Eyes)
-  float angle = millis() * 0.008; // ঘোরার গতি একটু কমিয়ে স্মুথ করা হয়েছে
-  
-  for (int i = 0; i < 2; i++) {
-    int centerX = (i == 0) ? 40 : 88; // দুই চোখের সেন্টার
-    
-    // চোখের বাইরের মণি (আগের চেয়ে কিউট শেপ)
-    display.drawRoundRect(centerX - 15, 20, 30, 30, 10, WHITE); 
-    
-    // ভেতরের স্পাইরাল এনিমেশন
-    for (int r = 3; r < 12; r += 3) {
-      int xOffset = (r-1) * cos(angle + r);
-      int yOffset = (r-1) * sin(angle + r);
-      display.drawPixel(centerX + xOffset, 35 + yOffset, WHITE);
-      display.drawCircle(centerX + xOffset, 35 + yOffset, 1, WHITE);
+    display.clearDisplay();
+
+    // ১. কিউট ঘোরানো চোখ (Spiral Eyes)
+    float angle = millis() * 0.008; // ঘোরার গতি একটু কমিয়ে স্মুথ করা হয়েছে
+
+    for (int i = 0; i < 2; i++) {
+        int centerX = (i == 0) ? 40 : 88; // দুই চোখের সেন্টার
+
+        // চোখের বাইরের মণি (আগের চেয়ে কিউট শেপ)
+        display.drawRoundRect(centerX - 15, 20, 30, 30, 10, WHITE);
+
+        // ভেতরের স্পাইরাল এনিমেশন
+        for (int r = 3; r < 12; r += 3) {
+            int xOffset = (r-1) * cos(angle + r);
+            int yOffset = (r-1) * sin(angle + r);
+            display.drawPixel(centerX + xOffset, 35 + yOffset, WHITE);
+            display.drawCircle(centerX + xOffset, 35 + yOffset, 1, WHITE);
+        }
     }
-  }
 
-  // ২. মাথার ওপর ঘোরানো তারা (Dizzy Stars) - এটি প্রফেশনাল লুক দেবে
-  int starX = 64 + 20 * cos(millis() * 0.005);
-  int starY = 10 + 5 * sin(millis() * 0.005);
-  display.setCursor(starX, starY);
-  display.print("*");
-  display.setCursor(128 - starX, starY + 2);
-  display.print(".");
+    // ২. মাথার ওপর ঘোরানো তারা (Dizzy Stars) - এটি প্রফেশনাল লুক দেবে
+    int starX = 64 + 20 * cos(millis() * 0.005);
+    int starY = 10 + 5 * sin(millis() * 0.005);
+    display.setCursor(starX, starY);
+    display.print("*");
+    display.setCursor(128 - starX, starY + 2);
+    display.print(".");
 
-  // ৩. মুখ (ছোট্ট গোল হাঁ করা মুখ - যা দেখতে কিউট)
-  display.drawCircle(64, 56, 4, WHITE); 
-  
-  display.display();
+    // ৩. মুখ (ছোট্ট গোল হাঁ করা মুখ - যা দেখতে কিউট)
+    display.drawCircle(64, 56, 4, WHITE);
+
+    display.display();
 }
 
 
 void expressionSleepy() {
-  display.fillRoundRect(25, 40, 30, 8, 4, WHITE); display.fillRoundRect(73, 40, 30, 8, 4, WHITE);
-  int zPos = (millis() / 700) % 3; 
-  display.setTextSize(1);
-  if(zPos >= 0) { display.setCursor(100, 15); display.print("z"); }
-  if(zPos >= 1) { display.setCursor(110, 10); display.print("z"); }
-  if(zPos >= 2) { display.setCursor(118, 5); display.print("z"); }
+    display.fillRoundRect(25, 40, 30, 8, 4, WHITE);
+    display.fillRoundRect(73, 40, 30, 8, 4, WHITE);
+    int zPos = (millis() / 700) % 3;
+    display.setTextSize(1);
+    if(zPos >= 0) {
+        display.setCursor(100, 15);
+        display.print("z");
+    }
+    if(zPos >= 1) {
+        display.setCursor(110, 10);
+        display.print("z");
+    }
+    if(zPos >= 2) {
+        display.setCursor(118, 5);
+        display.print("z");
+    }
 }
 
 void expressionSuperAngry() {
-  display.drawLine(20, 15, 55, 30, WHITE); display.drawLine(108, 15, 73, 30, WHITE);
-  drawEye(25, 25, 30, 20, 5); drawEye(73, 25, 30, 20, 5);
+    display.drawLine(20, 15, 55, 30, WHITE);
+    display.drawLine(108, 15, 73, 30, WHITE);
+    drawEye(25, 25, 30, 20, 5);
+    drawEye(73, 25, 30, 20, 5);
 }
 
 void drawEye(int x, int y, int w, int h, int r) {
-  if (isBlinking) { display.fillRect(x, y + (h/2), w, 4, WHITE); } 
-  else { display.fillRoundRect(x, y, w, h, r, WHITE); display.fillCircle(x + (w/2) + pupilX, y + (h/2) + pupilY, 4, BLACK); }
+    if (isBlinking) {
+        display.fillRect(x, y + (h/2), w, 4, WHITE);
+    }
+    else {
+        display.fillRoundRect(x, y, w, h, r, WHITE);
+        display.fillCircle(x + (w/2) + pupilX, y + (h/2) + pupilY, 4, BLACK);
+    }
 }
 
 void expressionNormal() {
-  if (millis() - lastLookTime > (isMoving ? 150 : random(2000, 5000))) {
-    pupilX = random(-7, 8); pupilY = random(-6, 7); lastLookTime = millis();
-  }
-  drawEye(25, 20, 30, 30, 8); drawEye(73, 20, 30, 30, 8);
+    if (millis() - lastLookTime > (isMoving ? 150 : random(2000, 5000))) {
+        pupilX = random(-7, 8);
+        pupilY = random(-6, 7);
+        lastLookTime = millis();
+    }
+    drawEye(25, 20, 30, 30, 8);
+    drawEye(73, 20, 30, 30, 8);
 }
 
 void expressionSad() {
-  display.clearDisplay();
-  
-  // ১. দুঃখিত ভ্রু (Sad Eyebrows) - যা কিউটনেস বাড়াবে
-  display.drawLine(25, 15, 45, 22, WHITE); // বাম ভ্রু
-  display.drawLine(103, 15, 83, 22, WHITE); // ডান ভ্রু
+    display.clearDisplay();
 
-  // ২. চোখ (মণি নিচের দিকে নামানো)
-  // আপনার আগের স্থানাঙ্ক অনুযায়ী
-  display.fillRoundRect(25, 25, 30, 25, 8, WHITE); // বাম চোখ
-  display.fillRoundRect(73, 25, 30, 25, 8, WHITE); // ডান চোখ
-  
-  // মণি (নিচের দিকে তাকিয়ে থাকা)
-  display.fillCircle(40, 42, 4, BLACK); 
-  display.fillCircle(88, 42, 4, BLACK);
+    // ১. দুঃখিত ভ্রু (Sad Eyebrows) - যা কিউটনেস বাড়াবে
+    display.drawLine(25, 15, 45, 22, WHITE); // বাম ভ্রু
+    display.drawLine(103, 15, 83, 22, WHITE); // ডান ভ্রু
 
-  // ৩. চোখের জল (Tear Drop) - এটি প্রফেশনাল লুক দেবে
-  static int tearY = 45;
-  display.fillTriangle(30, tearY, 34, tearY, 32, tearY - 4, WHITE);
-  display.fillCircle(32, tearY + 2, 2, WHITE);
-  
-  tearY++; // চোখের জল নিচে পড়বে
-  if (tearY > 60) tearY = 45;
+    // ২. চোখ (মণি নিচের দিকে নামানো)
+    // আপনার আগের স্থানাঙ্ক অনুযায়ী
+    display.fillRoundRect(25, 25, 30, 25, 8, WHITE); // বাম চোখ
+    display.fillRoundRect(73, 25, 30, 25, 8, WHITE); // ডান চোখ
 
-  // ৪. মুখ (উল্টো বাঁকানো ছোট মুখ)
-  display.drawCircleHelper(64, 62, 10, 1, WHITE); 
-  display.drawCircleHelper(64, 62, 10, 2, WHITE); 
+    // মণি (নিচের দিকে তাকিয়ে থাকা)
+    display.fillCircle(40, 42, 4, BLACK);
+    display.fillCircle(88, 42, 4, BLACK);
 
-  display.display();
+    // ৩. চোখের জল (Tear Drop) - এটি প্রফেশনাল লুক দেবে
+    static int tearY = 45;
+    display.fillTriangle(30, tearY, 34, tearY, 32, tearY - 4, WHITE);
+    display.fillCircle(32, tearY + 2, 2, WHITE);
+
+    tearY++; // চোখের জল নিচে পড়বে
+    if (tearY > 60) tearY = 45;
+
+    // ৪. মুখ (উল্টো বাঁকানো ছোট মুখ)
+    display.drawCircleHelper(64, 62, 10, 1, WHITE);
+    display.drawCircleHelper(64, 62, 10, 2, WHITE);
+
+    display.display();
 }
 
 
 void expressionLove() {
-  display.clearDisplay();
-  
-  // ১. স্মুথ পালসিং ক্যালকুলেশন (sine wave ব্যবহার করে)
-  // এটি হার্টের স্পন্দনকে খুব স্মুথ এবং প্রফেশনাল করে তুলবে
-  float pulse = sin(millis() * 0.005) * 3; 
-  int s = (int)pulse;
+    display.clearDisplay();
 
-  // ২. বাম পাশের হার্ট (বাম চোখ)
-  display.fillCircle(32, 28, 8 + s, WHITE); 
-  display.fillCircle(48, 28, 8 + s, WHITE);
-  display.fillTriangle(24 - s, 32, 56 + s, 32, 40, 52 + s, WHITE);
+    // ১. স্মুথ পালসিং ক্যালকুলেশন (sine wave ব্যবহার করে)
+    // এটি হার্টের স্পন্দনকে খুব স্মুথ এবং প্রফেশনাল করে তুলবে
+    float pulse = sin(millis() * 0.005) * 3;
+    int s = (int)pulse;
 
-  // ৩. ডান পাশের হার্ট (ডান চোখ)
-  display.fillCircle(80, 28, 8 + s, WHITE); 
-  display.fillCircle(96, 28, 8 + s, WHITE);
-  display.fillTriangle(72 - s, 32, 104 + s, 32, 88, 52 + s, WHITE);
+    // ২. বাম পাশের হার্ট (বাম চোখ)
+    display.fillCircle(32, 28, 8 + s, WHITE);
+    display.fillCircle(48, 28, 8 + s, WHITE);
+    display.fillTriangle(24 - s, 32, 56 + s, 32, 40, 52 + s, WHITE);
 
-  // ৪. ফ্লোটিং হার্ট এনিমেশন (ছোট ছোট হার্ট উপরে উড়ে যাবে)
-  static int heartY = 20;
-  static int heartX = 64;
-  display.drawPixel(heartX, heartY, WHITE);
-  display.drawPixel(heartX-1, heartY-1, WHITE);
-  display.drawPixel(heartX+1, heartY-1, WHITE);
-  
-  heartY--; // হার্ট উপরে উঠবে
-  if (heartY < 0) {
-    heartY = 30;
-    heartX = random(40, 90);
-  }
+    // ৩. ডান পাশের হার্ট (ডান চোখ)
+    display.fillCircle(80, 28, 8 + s, WHITE);
+    display.fillCircle(96, 28, 8 + s, WHITE);
+    display.fillTriangle(72 - s, 32, 104 + s, 32, 88, 52 + s, WHITE);
 
-  // ৫. কিউট স্মাইল
-  display.drawCircleHelper(64, 48, 8, 2, WHITE); 
+    // ৪. ফ্লোটিং হার্ট এনিমেশন (ছোট ছোট হার্ট উপরে উড়ে যাবে)
+    static int heartY = 20;
+    static int heartX = 64;
+    display.drawPixel(heartX, heartY, WHITE);
+    display.drawPixel(heartX-1, heartY-1, WHITE);
+    display.drawPixel(heartX+1, heartY-1, WHITE);
 
-  display.display();
+    heartY--; // হার্ট উপরে উঠবে
+    if (heartY < 0) {
+        heartY = 30;
+        heartX = random(40, 90);
+    }
+
+    // ৫. কিউট স্মাইল
+    display.drawCircleHelper(64, 48, 8, 2, WHITE);
+
+    display.display();
 }
 
 
 void showWeatherPage() {
-  display.setTextSize(1); display.setCursor(0, 0); display.print(currentLocation);
-  display.drawLine(0, 10, 128, 10, WHITE);
-  display.setTextSize(2); display.setCursor(0, 20); display.print(weatherTemp + " C ");
-  display.setTextSize(1); display.print(weatherDesc);
-  display.drawLine(0, 42, 128, 42, WHITE);
-  display.setCursor(0, 48); display.print("Hum: " + humidity + "%");
-  display.setCursor(65, 48); display.print("Wind: " + windSpeed + "m/s");
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print(currentLocation);
+    display.drawLine(0, 10, 128, 10, WHITE);
+    display.setTextSize(2);
+    display.setCursor(0, 20);
+    display.print(weatherTemp + " C ");
+    display.setTextSize(1);
+    display.print(weatherDesc);
+    display.drawLine(0, 42, 128, 42, WHITE);
+    display.setCursor(0, 48);
+    display.print("Hum: " + humidity + "%");
+    display.setCursor(65, 48);
+    display.print("Wind: " + windSpeed + "m/s");
 }
 
 void showTimePage() {
-  display.setTextSize(1); display.setCursor(45, 5); display.print("TIME");
-  display.drawLine(0, 15, 128, 15, WHITE);
-  display.setTextSize(3); display.setCursor(20, 30); display.print(timeClient.getFormattedTime().substring(0, 5));
+    display.setTextSize(1);
+    display.setCursor(45, 5);
+    display.print("TIME");
+    display.drawLine(0, 15, 128, 15, WHITE);
+    display.setTextSize(3);
+    display.setCursor(20, 30);
+    display.print(timeClient.getFormattedTime().substring(0, 5));
 }
 
 void drawLoading() {
-  display.clearDisplay(); display.setCursor(20, 30); display.print("Connecting WiFi..."); display.display();
+    display.clearDisplay();
+    display.setCursor(20, 30);
+    display.print("Connecting WiFi...");
+    display.display();
 }
 
-void drawAutoExpressions() { expressionNormal();
+void drawAutoExpressions() {
+    expressionNormal();
 }
 
 
-// এটি কোডের একদম শেষে অন্য ফাংশনগুলোর সাথে থাকবে
+// এটি কোডের একদম শেষে অন্য ফ���ংশনগুলোর সাথে থাকবে
 void detectGesture() {
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
 
-  float force = sqrt(a.acceleration.x * a.acceleration.x + 
-                     a.acceleration.y * a.acceleration.y + 
-                     a.acceleration.z * a.acceleration.z);
+    float force = sqrt(a.acceleration.x * a.acceleration.x +
+                       a.acceleration.y * a.acceleration.y +
+                       a.acceleration.z * a.acceleration.z);
 
-  if (force > 25.0) { 
-    currentMood = 7; 
-    playAngrySound();
-    moodEndTime = millis() + 4000;
-  }
-  else if (force > 11.5 && force < 14.5) {
-    static unsigned long moveStart = 0;
-    if (moveStart == 0) moveStart = millis();
-    if (millis() - moveStart > 2000) { 
-      currentMood = 2; 
-      playLoveSound();
-      moodEndTime = millis() + 4000;
-      moveStart = 0;
+    if (force > 25.0) {
+        currentMood = 7;
+        playAngrySound();
+        moodEndTime = millis() + 4000;
     }
-  }
+    else if (force > 11.5 && force < 14.5) {
+        static unsigned long moveStart = 0;
+        if (moveStart == 0) moveStart = millis();
+        if (millis() - moveStart > 2000) {
+            currentMood = 2;
+            playLoveSound();
+            moodEndTime = millis() + 4000;
+            moveStart = 0;
+        }
+    }
 }
 
 void expressionVebchi() {
-  display.clearDisplay();
-  
-  // ১. চোখ (ইমেজ ০ থেকে অনুপ্রাণিত - droopy sleepy looks)
-  for(int i=0; i<2; i++) {
-    int centerX = (i == 0) ? 40 : 88; // দুই চোখের সেন্টার
-    
-    // চোখের সাদা অংশ (droopy oval shape)
-    display.fillRoundRect(centerX - 15, 20, 30, 20, 8, WHITE);
-    
-    // চোখের মণি (নিচের দিকে তাকিয়ে থাকা)
-    display.fillCircle(centerX, 35, 5, BLACK);
-    
-    // চোখের পাতা (ভারী ভাব দেওয়ার জন্য উপরে হালকা কভার)
-    display.fillRoundRect(centerX - 15, 18, 30, 8, 4, BLACK);
-  }
+    display.clearDisplay();
 
-  // ২. ভ্রু (দুষ্টু লুকের জন্য কোণাকুণি)
-  display.drawLine(25, 15, 45, 22, WHITE); // বাম ভ্রু
-  display.drawLine(103, 15, 83, 22, WHITE); // ডান ভ্রু
+    // ১. চোখ (একটু Narrow এবং দুষ্টু চাহনি)
+    display.fillRoundRect(25, 25, 30, 20, 5, WHITE); // বাম চোখ
+    display.fillRoundRect(73, 25, 30, 20, 5, WHITE); // ডান চোখ
 
-  // ৩. মুখ (ইমেজ ১ থেকে অনুপ্রাণিত - জিব বের করা ও দাঁত দেখানো)
-  display.drawCircleHelper(64, 50, 10, 2, WHITE); // উপরের ঠোঁট
-  
-  // বড় দাঁত (rectangular shape)
-  display.fillRect(58, 50, 12, 5, WHITE); // উপরের দুই বড় দাঁত
-  display.drawLine(64, 50, 64, 55, BLACK); // দাঁতের মাঝের লাইন
+    // মণি (মাঝখানে, একটু বড়)
+    display.fillCircle(40, 35, 4, BLACK);
+    display.fillCircle(88, 35, 4, BLACK);
 
-  static float tongueY = 56; // জিবের নড়াচড়া
-  tongueY = 56 + sin(millis() * 0.008) * 3;
-  
-  // লম্বা জিব (Tongue shape)
-  display.fillRoundRect(56, 56, 16, (int)(75 - tongueY), 6, WHITE); 
-  display.drawLine(64, 58, 64, (int)(70 - tongueY), BLACK); // জিবের মাঝের লাইন
-  
-  // ৪. ঘুমের চিহ্ন (Animated "Zzz" - ইমেজ ০ থেকে)
-  // এটি প্রতি সেকেন্ডে একটি করে "Z" বাড়াবে
-  int zCount = (millis() / 1000) % 4; // ০ থেকে ৩ পর্যন্ত কাউন্ট
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  
-  if(zCount >= 1) { display.setCursor(100, 20); display.print("z"); }
-  if(zCount >= 2) { display.setCursor(110, 10); display.print("z"); }
-  if(zCount >= 3) { display.setCursor(118, 2); display.print("Z"); }
+    // ২. ভ্রু (দুষ্টু লুক দেওয়ার জন্য)
+    display.drawLine(25, 18, 45, 25, WHITE); // বাম ভ্রু
+    display.drawLine(103, 18, 83, 25, WHITE); // ডান ভ্রু
 
-  // ৫. দুষ্টু অভিব্যক্তি (Nya! টেক্সট)
-  if ((millis() / 500) % 2 == 0) {
-    display.setCursor(5, 50); display.print("Nya!");
-  }
+    // ৩. জিব মিলিয়ে মুখ (Poking Tongue)
+    display.drawCircleHelper(64, 52, 6, 2, WHITE); // উপরের ঠোঁট
 
-  display.display();
+    static float tongueY = 54; // জিবের নড়াচড়া
+    tongueY = 54 + sin(millis() * 0.008) * 3;
+
+    // লম্বা জিব (Tongue shape)
+    display.fillRoundRect(56, 54, 16, (int)(72 - tongueY), 6, WHITE);
+    display.drawLine(64, 56, 64, (int)(68 - tongueY), BLACK); // জিবের মাঝের লাইন
+
+    // ৪. দুষ্টু অভিব্যক্তি (Naughty lines)
+    if ((millis() / 500) % 2 == 0) {
+        display.setCursor(110, 40);
+        display.print("Nya!");
+        display.setCursor(5, 40);
+        display.print("Nya!");
+    }
+
+    display.display();
 }
-
-
 
 void expressionRelax() {
-  display.clearDisplay();
-  
-  // ১. কিউট ঘুম-ঘুম চোখ (droopy sleepy eyes)
-  // চোখগুলো ইমোজির মতো একটু ভারী এবং নিচের দিকে নামানো দেখাবে
-  for(int i=0; i<2; i++) {
-    int centerX = (i == 0) ? 40 : 88; // বাম এবং ডান চোখের সেন্টার
-    
-    // চোখের সাদা অংশ (droopy oval shape)
-    display.fillRoundRect(centerX - 15, 20, 30, 20, 8, WHITE);
-    
-    // চোখের মণি (নিচের দিকে তাকিয়ে থাকা)
-    display.fillCircle(centerX, 35, 5, BLACK);
-    
-    // চোখের পাতা (ভারী ভাব দেওয়ার জন্য উপরে হালকা কভার)
-    display.fillRoundRect(centerX - 15, 18, 30, 8, 4, BLACK);
-  }
+    display.clearDisplay();
+    // শান্ত চোখ (নিচের দিকে বাঁকানো)
+    display.drawCircleHelper(40, 40, 15, 1, WHITE); // বাম চোখ
+    display.drawCircleHelper(88, 40, 15, 1, WHITE); // ডান চোখ
+    // ছোট হাসিমুখ
+    display.drawCircleHelper(64, 48, 8, 2, WHITE);
 
-  // ২. ভ্রু (Eyebrows - ইমোজির মতো একটু উপরে উঠানো)
-  display.drawCircleHelper(40, 15, 10, 1, WHITE); 
-  display.drawCircleHelper(88, 15, 10, 1, WHITE);
-
-  // ৩. শান্ত হাসিমুখ (স্মুথ হাফ-সার্কেল)
-  display.drawCircleHelper(64, 50, 12, 2, WHITE); 
-  
-  // ৪. ঘুমের চিহ্ন (Animated "Zzz")
-  // এটি প্রতি সেকেন্ডে একটি করে "Z" বাড়াবে এবং ৩টি পর্যন্ত গিয়ে আবার রিস্টার্ট হবে
-  int zCount = (millis() / 1000) % 4; // ০ থেকে ৩ পর্যন্ত কাউন্ট
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  
-  if(zCount >= 1) { display.setCursor(100, 20); display.print("z"); }
-  if(zCount >= 2) { display.setCursor(110, 10); display.print("z"); }
-  if(zCount >= 3) { display.setCursor(118, 2); display.print("Z"); }
-
-  display.display();
-}
-
-void playSnoreSound() {
-  for (int hz = 120; hz < 220; hz += 5) {
-    playTone(hz, 15);
-  }
-  delay(150);
-  for (int hz = 220; hz > 120; hz -= 5) {
-    playTone(hz, 15);
-  }
-}
-
-
-//'Zzz' ঘুমের অভিব্যক্তি ড্রয়িং
-void drawZZZExpression() {
-  display.clearDisplay();
-  // চোখগুলো (sleeping eyes)
-  display.fillRoundRect(25, 40, 30, 8, 4, WHITE); // বাম চোখ
-  display.fillRoundRect(73, 40, 30, 8, 4, WHITE); // ডান চোখ
-  
-  // Zzz টেক্সট
-  display.setCursor(100, 15); display.print("z");
-  display.setCursor(110, 10); display.print("z");
-  display.setCursor(118, 5); display.print("z");
-  display.display();
-}
-
-// ২. 'হাসিখুশি জিহ্বা বের করা' অভিব্যক্তি ড্রয়িং
-void drawLaughingExpression() {
-  display.clearDisplay();
-  // চোখগুলো (laughing closed eyes)
-  display.fillTriangle(25, 30, 40, 20, 55, 30, WHITE); // বাম চোখ
-  display.fillTriangle(73, 30, 88, 20, 103, 30, WHITE); // ডান চোখ
-  
-  // মুখ এবং জিহ্বা
-  display.drawCircleHelper(64, 55, 15, 2, WHITE); // মুখ
-  display.fillRoundRect(56, 56, 16, 12, 6, WHITE); // জিহ্বা
-  display.display();
+    if ((millis() / 1000) % 2 == 0) {
+        display.setCursor(100, 20);
+        display.print("~");
+        display.setCursor(20, 20);
+        display.print("~");
+    }
+    display.display();
 }
