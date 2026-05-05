@@ -311,23 +311,38 @@ void check_for_updates() {
     display.setCursor(10, 20);
     display.print("Checking Update...");
     display.display();
+    Serial.println("Checking for updates...");
 
-    WiFiClientSecure *client = new WiFiClientSecure;
-    if(client) {
-        client->setInsecure(); // SSL সার্টিফিকেট এরর এড়ানোর জন্য
-        t_httpUpdate_return ret = httpUpdate.update(*client, firmware_url);
+    WiFiClientSecure client;
+    client.setInsecure(); // SSL সার্টিফিকেট ইগনোর করবে
 
-        if (ret == HTTP_UPDATE_OK) {
-            Serial.println("Update success!"); // সাকসেস হলে অটো রিস্টার্ট হবে
-        } else {
-            // আপডেট না থাকলে বা ফেইল করলে ২ সেকেন্ড দেখাবে
+    // গিটহাবের জন্য User-Agent সেট করা খুব জরুরি
+    httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+    
+    t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
+
+    switch(ret) {
+        case HTTP_UPDATE_FAILED:
+            Serial.printf("Update Failed! Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+            display.clearDisplay();
+            display.setCursor(10, 20);
+            display.print("Update Failed!");
+            display.display();
+            delay(2000);
+            break;
+
+        case HTTP_UPDATE_NO_UPDATES:
+            Serial.println("No new updates.");
             display.clearDisplay();
             display.setCursor(10, 20);
             display.print("No New Update");
             display.display();
             delay(2000);
-        }
-        delete client;
+            break;
+
+        case HTTP_UPDATE_OK:
+            Serial.println("Update OK!"); // এখানে অটো রিস্টার্ট হবে
+            break;
     }
 }
 
