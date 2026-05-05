@@ -40,6 +40,8 @@ void drawAutoExpressions();
 void playSnoreSound();
 void expressionRelax();
 void detectGesture();
+void drawZZZExpression();
+void drawLaughingExpression();
 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -150,6 +152,7 @@ const int BUZZER_PIN = 3;
 // --- গ্লোবাল ভ্যারিয়েবল ---
 String stSSID = "";
 String stPass = "";
+bool startSmartConfig = false;
 int currentPage = 0; 
 String currentLocation = "Unknown";
 String weatherTemp = "--";
@@ -326,6 +329,7 @@ void setup() {
   // --- বুট লোগো প্রদর্শন শেষ ---
   
     // --- ওয়াইফাই ডাটা রিট্রাইভ করা ---
+    // --- ওয়াইফাই ডাটা রিট্রাইভ করা ---
   preferences.begin("wifi-data", true); 
   stSSID = preferences.getString("ssid", "");
   stPass = preferences.getString("pass", "");
@@ -333,33 +337,75 @@ void setup() {
 
   Serial.println("Stored SSID: [" + stSSID + "]");
   
-  if (stSSID == "" || stSSID.length() < 1) {
-    // যদি মেমোরিতে কিছু না থাকে, তবেই সব ডিসকানেক্ট করে পোর্টাল চালু হবে
+  if (stSSID == "" || stSSID.length() < 1 || startSmartConfig) { 
+    Serial.println("Starting SmartConfig...");
+
+    // মেমোরি ক্লিয়ার করে ফ্রেশ স্টার্ট করা
+    preferences.begin("wifi-data", false);
+    preferences.clear(); 
+    preferences.end();
+
     WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
+    WiFi.mode(WIFI_AP_STA);
     delay(500);
-    startCaptivePortal();
-  } else {
-    // মেমোরিতে ডাটা থাকলে স্ক্রিনে দেখাবে এবং কানেক্ট করার চেষ্টা করবে
+
+    // ১. আপনার আইডিয়া: স্মার্ট কনফিগ চলাকালীন 'Zzz' এনিমেশন
+    drawZZZExpression(); 
+    
+    WiFi.beginSmartConfig();
+
+    // স্মার্ট কনফিগ শেষ না হওয়া পর্যন্ত ঘুমের অভিব্যক্তি চলবে
+    while (!WiFi.smartConfigDone()) {
+      delay(500);
+      Serial.print(".");
+      // আপনি চাইলে এই লুপের ভেতর আরও এনিমেশন ফ্রেম এড করতে পারেন
+    }
+    Serial.println("\nSmartConfig Done!");
+  } 
+  else {
+    // ২. আগের সেভ করা ডাটা দিয়ে কানেক্ট করার চেষ্টা
+    WiFi.begin(stSSID.c_str(), stPass.c_str());
+  }
+
+  int retry = 0;
+  // কানেকশনের জন্য ২০ সেকেন্ড সময় দিন
+  while (WiFi.status() != WL_CONNECTED && retry < 40) {
+    delay(500);
+    // আপনি চাইলে এখানে কানেকশন চেষ্টা করার জন্য অন্য কোনো কিউট অভিব্যক্তি এড করতে পারেন
+    Serial.print(".");
+    retry++;
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
     display.clearDisplay();
-    display.setTextSize(1);
     display.setCursor(0, 0);
-    display.print("Connecting to:");
+    display.print("WIFI FAILED!");
     display.setCursor(0, 15);
-    display.print(stSSID);
+    display.print("Restarting...");
+    display.display();
+    delay(3000);
+    ESP.restart(); 
+  } else {
+    // সফলভাবে কানেক্ট হলে
+    display.clearDisplay();
+    
+    //'হাসিখুশি' অভিব্যক্তি
+    drawLaughingExpression(); 
+
+    display.setCursor(0, 40);
+    display.print("WIFI CONNECTED!");
     display.display();
     
-    // ওয়াইফাই মোড সেট করা
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(stSSID.c_str(), stPass.c_str());
-    delay(1000); 
+    delay(2000);
   }
+
+
 
     WiFi.mode(WIFI_STA);
   delay(200);
   WiFi.begin(stSSID.c_str(), stPass.c_str());
 
-  int retry = 0;
+  retry = 0;
   // কানেকশনের জন্য ২০ সেকেন্ড সময় দিন (৪০ * ৫০০ms)
   while (WiFi.status() != WL_CONNECTED && retry < 40) {
     delay(500);
@@ -932,4 +978,35 @@ void playSnoreSound() {
     playTone(hz, 15);
   }
 }
+
+
+//'Zzz' ঘুমের অভিব্যক্তি ড্রয়িং
+void drawZZZExpression() {
+  display.clearDisplay();
+  // চোখগুলো (sleeping eyes)
+  display.fillRoundRect(25, 40, 30, 8, 4, WHITE); // বাম চোখ
+  display.fillRoundRect(73, 40, 30, 8, 4, WHITE); // ডান চোখ
+  
+  // Zzz টেক্সট
+  display.setCursor(100, 15); display.print("z");
+  display.setCursor(110, 10); display.print("z");
+  display.setCursor(118, 5); display.print("z");
+  display.display();
+}
+
+// ২. 'হাসিখুশি জিহ্বা বের করা' অভিব্যক্তি ড্রয়িং
+void drawLaughingExpression() {
+  display.clearDisplay();
+  // চোখগুলো (laughing closed eyes)
+  display.fillTriangle(25, 30, 40, 20, 55, 30, WHITE); // বাম চোখ
+  display.fillTriangle(73, 30, 88, 20, 103, 30, WHITE); // ডান চোখ
+  
+  // মুখ এবং জিহ্বা
+  display.drawCircleHelper(64, 55, 15, 2, WHITE); // মুখ
+  display.fillRoundRect(56, 56, 16, 12, 6, WHITE); // জিহ্বা
+  display.display();
+}
+
+
+
     
