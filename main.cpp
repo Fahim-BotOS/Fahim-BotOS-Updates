@@ -1,6 +1,7 @@
 #include <HTTPUpdate.h>
 #include <Arduino.h>
 #include <HTTPUpdate.h>
+#include <WiFiClientSecure.h>
 
 // ওটিএ লিঙ্ক
 const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
@@ -388,10 +389,11 @@ if (stSSID == "") {
     display.print("Checking Update...");
     display.display();
 
-    WiFiClientSecure client;
-    client.setInsecure();
+    WiFiClientSecure* client = new WiFiClientSecure;
+    client->setInsecure();
     httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-    t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
+    t_httpUpdate_return ret = httpUpdate.update(*client, firmware_url);
+    delete client;
 
     if (ret == HTTP_UPDATE_FAILED) {
         Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
@@ -408,10 +410,11 @@ if (stSSID == "") {
     server.on("/update", []() {
       server.send(200, "text/plain", "Updating...");
       delay(500);
-      WiFiClientSecure client;
-      client.setInsecure();
+      WiFiClientSecure* client = new WiFiClientSecure;
+      client->setInsecure();
       httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-      httpUpdate.update(client, firmware_url);
+      httpUpdate.update(*client, firmware_url);
+      delete client;
     });
     server.begin();
     timeClient.begin();
