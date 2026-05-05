@@ -404,11 +404,25 @@ void setup() {
     preferences.end();
 
     if (otaDone) {
-        // flag রিসেট করুন
         preferences.begin("system", false);
         preferences.putBool("ota_done", false);
         preferences.end();
-        Serial.println("OTA boot detected! Doing full WiFi reset...");
+        
+        // OLED-এ দেখান
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.print("OTA BOOT OK");
+        display.setCursor(0, 15);
+        display.print("WiFi Resetting...");
+        display.display();
+        delay(3000);
+    } else {
+        // OTA flag পাওয়া যায়নি
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.print("NORMAL BOOT");
+        display.display();
+        delay(2000);
     }
 
     // WiFi chip সম্পূর্ণ রিসেট
