@@ -3,7 +3,7 @@
 #include <HTTPUpdate.h>
 
 // ওটিএ লিঙ্ক
-const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/download/v1.0.2/firmware.bin";
+const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
 
 // --- ফাংশনগুলোকে আগে থেকে চিনিয়ে দেওয়া (Forward Declaration) ---
 void handleSave();
@@ -374,31 +374,30 @@ if (stSSID == "") {
     preferences.clear();
     preferences.end();
     startCaptivePortal();
-    } else {
+} else {
     // সফলভাবে কানেক্ট হলে
     display.clearDisplay();
     display.setCursor(0, 0);
     display.print("CONNECTED!");
     display.display();
-        delay(2000);
-  } // এই ব্র্যাকেটটি 'else' ব্লকের জন্য (৩৮৩ নম্বর লাইনের আশেপাশে)
+    delay(2000);
 
-  // --- ওটিএ আপডেট চেক শুরু ---
-  display.clearDisplay();
-  display.setCursor(0, 20);
-  display.print("Checking Update...");
-  display.display();
+    // --- ওটিএ আপডেট চেক শুরু ---
+    display.clearDisplay();
+    display.setCursor(0, 20);
+    display.print("Checking Update...");
+    display.display();
 
-  WiFiClientSecure client;
-  client.setInsecure(); 
+    WiFiClientSecure client;
+    client.setInsecure();
+    httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+    t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
 
-  t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
-
-  if (ret == HTTP_UPDATE_FAILED) {
-      Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+    if (ret == HTTP_UPDATE_FAILED) {
+        Serial.printf("Update Failed (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+    }
+    // --- ওটিএ আপডেট চেক শেষ ---
   }
-  // --- ওটিএ আপডেট চেক শেষ ---
-
   if (MDNS.begin("pixel")) { 
     Serial.println("MDNS responder started");
   }
@@ -843,7 +842,3 @@ void playSnoreSound() {
     playTone(hz, 15);
   }
 }
-
-
-
-    
