@@ -341,8 +341,17 @@ void check_for_updates() {
             break;
 
         case HTTP_UPDATE_OK:
-            Serial.println("Update OK!"); // এখানে অটো রিস্টার্ট হবে
+            Serial.println("Update OK! Clearing old memory...");
+            
+            // এই ৪টি লাইন এখানে যোগ করুন
+            preferences.begin("wifi", false); 
+            preferences.clear(); 
+            preferences.end();
+            
+            delay(1000);
+            // এরপর অটো রিস্টার্ট হবে এবং ফ্রেশ মেমোরি নিয়ে পোর্টাল চালু হবে
             break;
+
     }
 }
 
@@ -459,6 +468,8 @@ if (WiFi.status() == WL_CONNECTED) {
     display.print("CONNECTED!");
     display.display();
     delay(1000);
+    
+WiFi.setSleep(false); // ওয়াইফাই যেন স্লিপ মোডে না যায়
 
     // ১. প্রথমে আপডেট চেক করবে
     check_for_updates(); 
