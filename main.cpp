@@ -1,6 +1,5 @@
 #include <HTTPUpdate.h>
 #include <Arduino.h>
-#include <WiFiClientSecure.h>
 
 // ওটিএ লিঙ্ক
 const char* firmware_url = "https://github.com/Fahim-BotOS/Fahim-BotOS-Updates/releases/latest/download/firmware.bin";
@@ -23,7 +22,7 @@ void playSleepSound();
 void playScaredSound();
 void playMoveSound();
 void drawMood(int mood);
-void expressionSkeptical();
+void expressionScared();
 void expressionDizzy();
 void expressionSleepy();
 void expressionSuperAngry();
@@ -36,9 +35,7 @@ void showWeatherPage();
 void showTimePage();
 void drawLoading();
 void drawAutoExpressions();
-void playSnoreSound();
-void detectGesture();
-void expressionRelax();
+void expressionPhysicsBall();
 
 
 #include <Wire.h>
@@ -55,7 +52,6 @@ void expressionRelax();
 #include <DNSServer.h>
 #include <Preferences.h>
 #include <ESPmDNS.h>
-#include <esp_wifi.h>
 
 // --- ওলেড ডিসপ্লে কনফিগারেশন ---
 #define SCREEN_WIDTH 128
@@ -151,7 +147,6 @@ const int BUZZER_PIN = 3;
 // --- গ্লোবাল ভ্যারিয়েবল ---
 String stSSID = "";
 String stPass = "";
-bool startSmartConfig = false;
 int currentPage = 0;
 String currentLocation = "Unknown";
 String weatherTemp = "--";
@@ -213,14 +208,10 @@ void handleSave() {
     ESP.restart();
 }
 
+
 void startCaptivePortal() {
-    WiFi.disconnect(true, true);
-    delay(1000);
-    WiFi.mode(WIFI_OFF);
-    delay(500);
     WiFi.mode(WIFI_AP);
-    delay(500);
-    WiFi.softAP(apSSID);
+    WiFi.softAP(apSSID); // পাসওয়ার্ড ছাড়া ওপেন নেটওয়ার্ক
     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 
     server.on("/", []() {
@@ -311,57 +302,6 @@ void handleSleep() {
     server.send(200, "text/plain", "Sleep Mode Active");
 }
 
-void check_for_updates() {
-    display.clearDisplay();
-    display.setCursor(10, 20);
-    display.print("Checking Update...");
-    display.display();
-    Serial.println("Checking for updates...");
-
-    // OTA শুরু হওয়ার আগেই flag সেট করুন
-    httpUpdate.onStart([]() {
-        Serial.println("OTA Started! Setting flag before reboot...");
-        Preferences p;
-        p.begin("system", false);
-        p.putBool("ota_done", true);
-        p.end();
-    });
-
-    WiFiClientSecure client;
-    client.setInsecure();
-    httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-    
-    t_httpUpdate_return ret = httpUpdate.update(client, firmware_url);
-
-    switch(ret) {
-        case HTTP_UPDATE_FAILED:
-            Serial.printf("Update Failed! Error (%d): %s\n", 
-                httpUpdate.getLastError(), 
-                httpUpdate.getLastErrorString().c_str());
-            display.clearDisplay();
-            display.setCursor(10, 20);
-            display.print("Update Failed!");
-            display.display();
-            delay(2000);
-            break;
-
-        case HTTP_UPDATE_NO_UPDATES:
-            Serial.println("No new updates.");
-            display.clearDisplay();
-            display.setCursor(10, 20);
-            display.print("No New Update");
-            display.display();
-            delay(2000);
-            break;
-
-        case HTTP_UPDATE_OK:
-            // এখানে কোড লেখার দরকার নেই
-            // onStart()-এ আগেই flag সেট হয়ে গেছে
-            break;
-    }
-}
-
-
 // ==========================================
 // --- ৩. সেটআপ ফাংশন ---
 // ==========================================
@@ -397,18 +337,11 @@ void setup() {
     playBootSound(); // লোগো আসার সময় শব্দ হবে
     delay(3000);     // ৩ সেকেন্ড লোগোটি স্থায়ী হবে
 
-    // ওয়াইফাই ডেটা রিট্রাইভ
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("WiFi Starting...");
-    display.display();
-    
-    WiFi.disconnect(true, true);
-    delay(2000);          // ২ সেকেন্ড অপেক্ষা
+    // ওয়াইফাই ডেটা রিট্রাইভ করা
+    // ওয়াইফাই ডেটা রিট্রাইভ করা
+    WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-    delay(2000);          // আরো ২ সেকেন্ড
-    esp_wifi_restore();   // WiFi chip সম্পূর্ণ factory reset
-    delay(1000);
+    delay(500);
 
     preferences.begin("wifi-data", true);
     stSSID = preferences.getString("ssid", "");
@@ -475,36 +408,12 @@ void setup() {
     server.on("/angry", handleAngry);
     server.on("/sleep", handleSleep);
     server.begin();
-if (WiFi.status() == WL_CONNECTED) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("CONNECTED!");
-    display.display();
-    delay(1000);
-    
-WiFi.setSleep(false); // ওয়াইফাই যেন স্লিপ মোডে না যায়
 
-    // ১. প্রথমে আপডেট চেক করবে
-    check_for_updates(); 
-
-    // ২. আপডেট চেক শেষ হলে আবার চেক করবে কানেকশন আছে কি না
-    if (WiFi.status() != WL_CONNECTED) {
-        WiFi.begin(stSSID.c_str(), stPass.c_str());
-        int retry = 0;
-        while (WiFi.status() != WL_CONNECTED && retry < 20) {
-            delay(500);
-            retry++;
-        }
-    }
-
-    // ৩. এরপর বাকি সার্ভিস শুরু
     timeClient.begin();
     fetchSmartWeather();
     lastSleepCheck = millis();
     playBootSound();
 }
-}
-
 
 // ==========================================
 // --- ৪. মেইন লুপ ---
@@ -563,7 +472,7 @@ void loop() {
     }
 
 // --- ২. মুভমেন্ট ও তালি শনাক্তকরণ লজিক ---
-    detectGesture();
+    //detectGesture();
 
 
     // তালি (Clap) বা ইমপ্যাক্ট শনাক্তকরণ
@@ -591,7 +500,26 @@ void loop() {
         isMoving = false;
     }
 
-    // --- ৩. পেজ ও মুড টাইমিং ---
+    // --- ৩. ঝাকুনি বা শেক ডিটেকশন লজিক ---
+    // নতুন করে sensors_event_t লিখার দরকার নেই, শুধু ডাটা আপডেট করলেই হবে
+    mpu.getEvent(&a, &g, &temp); 
+
+    // X, Y, Z অক্ষের সম্মিলিত শক্তি বা G-Force মাপা
+    float shakeForce = sqrt(a.acceleration.x * a.acceleration.x + 
+                            a.acceleration.y * a.acceleration.y + 
+                            a.acceleration.z * a.acceleration.z);
+
+    // যদি রোবটকে যথেষ্ট জোরে ঝাকানো হয় (১৮.০ এর উপরে)
+    if (shakeForce > 18.0) {    
+        if (currentMood != 11) { // যদি অলরেডি এই মুডে না থাকে
+            currentMood = 11;    
+            moodEndTime = millis() + 5000; // ৫ সেকেন্ডের জন্য এনিমেশন চলবে
+        }
+    }
+
+
+
+    // --- ৪. পেজ ও মুড টাইমিং ---
     if (currentMood == 0 || currentMillis > moodEndTime) {
         if (currentMood != 0 && currentMood != 5) currentMood = 0;
         if (!isMoving && !isTouching) {
@@ -614,7 +542,7 @@ void loop() {
         }
     }
 
-    // --- ৪. স্লিপ ও আপডেট লজিক ---
+    // --- ৫. স্লিপ ও আপডেট লজিক ---
     if (currentMillis - lastSleepCheck > 600000) {
         if (currentMood != 5) playSleepSound();
         currentMood = 5;
@@ -630,14 +558,11 @@ void loop() {
     }
     if (isBlinking && currentMillis - lastBlinkTime > 150) isBlinking = false;
 
-    // --- ৫. রেন্ডারিং ---
+    // --- ৬. রেন্ডারিং ---
+    display.clearDisplay();
     if (currentMillis < moodEndTime || currentMood == 5) {
-    if (currentMood == 5) {
-        playSnoreSound(); // নাক ডাকার শব্দ এখানে ডাকবে
+        drawMood(currentMood);
     }
-    drawMood(currentMood);
-}
-
     else {
         if (currentPage == 0) drawAutoExpressions();
         else if (currentPage == 1) showWeatherPage();
@@ -703,21 +628,6 @@ void playMoveSound() {
     for (int hz = 1800; hz > 1200; hz -= 100) playTone(hz, 5);
 }
 
-void playSnoreSound() {
-    // নাক ডাকার শব্দের মতো একটি ইফেক্ট (কম ফ্রিকোয়েন্সি থেকে বেশি)
-    for (int i = 150; i < 250; i += 5) {
-        tone(BUZZER_PIN, i);
-        delay(20);
-    }
-    for (int i = 250; i > 150; i -= 5) {
-        tone(BUZZER_PIN, i);
-        delay(20);
-    }
-    noTone(BUZZER_PIN); // শব্দ বন্ধ
-}
-
-
-
 void drawMood(int mood) {
     switch(mood) {
     case 1:
@@ -736,7 +646,7 @@ void drawMood(int mood) {
         expressionSuperAngry();
         break;
     case 8:
-        expressionSkeptical();
+        expressionScared();
         break;
     case 9:
         expressionVebchi();
@@ -744,37 +654,58 @@ void drawMood(int mood) {
     case 10:
         expressionRelax();
         break;
+    case 11:
+    expressionPhysicsBall();
+    break;
     }
 }
 
 
 
-void expressionSkeptical() {
-    display.clearDisplay();
+void expressionScared() {
+    display.clearDisplay(); // স্ক্রিন ক্লিয়ার করবে
 
-    // ১. বাম চোখ (একটু বড় এবং সন্দেহজনকভাবে তাকিয়ে থাকা)
-    display.fillRoundRect(25, 25, 30, 25, 8, WHITE);
-    // মণি - যা ডানে এবং বামে হালকা নড়াচড়া করবে (সন্দেহ করার মতো)
-    int lookOffset = (millis() / 1000) % 2 == 0 ? 2 : -2;
-    display.fillCircle(40 + lookOffset, 37, 5, BLACK);
+    // ১. কাঁপুনির এনিমেশন (Shaking/Wiggle Animation Logic)
+    // wiggleX এবং wiggleY প্রতি লুপে দ্রুত পজিশন বদলাবে
+    int wiggleX = (millis() % 80 > 40) ? 2 : -2; 
+    int wiggleY = (millis() % 60 > 30) ? 1 : -1;
 
-    // ২. ডান চোখ (সরু বা ছোট করা চোখ - এটিই স্কেপটিক্যাল লুক দেয়)
-    // চোখটি একটু উপরে উঠানো থাকবে
-    display.fillRoundRect(73, 20, 30, 15, 4, WHITE);
-    display.fillCircle(88 + lookOffset, 27, 4, BLACK);
+    // ২. প্রফেশনাল ভীত চোখ (আকার বড় করা হয়েছে)
+    // চোখগুলো স্ক্রিনের ডানদিকের উপরের কোণায় থাকবে
+    int eyeSize = 25;            // ভয় পাওয়ার কারণে চোখ বড় (আগে ১০ ছিল)
+    int cornerX = 75 + wiggleX;  // চোখের আকার বড় হওয়ায় পজিশন অ্যাডজাস্ট করা হয়েছে (আগে ১০০ ছিল)
+    int cornerY = 10 + wiggleY;  // মূল পজিশন ১০, সাথে কাঁপুনির অফসেট
 
-    // ৩. সন্দেহজনক মুখ (একটি বাঁকা লাইন যা কাঁপবে)
-    int mouthWiggle = (millis() % 200 > 100) ? 1 : 0;
-    display.drawLine(54, 52 + mouthWiggle, 74, 52 - mouthWiggle, WHITE);
+    // বাম চোখ (কোণায়)
+    display.fillRoundRect(cornerX, cornerY, eyeSize, eyeSize, 5, WHITE); // কর্নার রেডিয়াস ৫ করা হয়েছে
+    display.fillCircle(cornerX + (eyeSize/2), cornerY + (eyeSize/2), 4, BLACK); // মণি (ভরাট)
 
-    // ৪. একটি ছোট্ট ঘাম বা দুশ্চিন্তার বিন্দু (Sweat drop) - যা কিউটনেস বাড়াবে
-    if ((millis() / 2000) % 2 == 0) {
-        display.fillCircle(110, 15, 2, WHITE);
-        display.drawLine(110, 13, 110, 10, WHITE);
+    // ডান চোখ (কোণায় এবং বাম চোখের পাশেই)
+    int eyeGap = 5; // দুই চোখের মাঝের দূরত্ব
+    display.fillRoundRect(cornerX + eyeSize + eyeGap, cornerY, eyeSize, eyeSize, 5, WHITE);
+    display.fillCircle(cornerX + eyeSize + eyeGap + (eyeSize/2), cornerY + (eyeSize/2), 4, BLACK);
+
+    // ৩. আতঙ্কের শব্দ (Panic Buzzer Sound - ২ নম্বর পিন)
+    static unsigned long lastPanicSound = 0;
+    if (millis() - lastPanicSound > 80) { // প্রতি ৮০ মিলি-সেকেন্ড অন্তর
+        playTone(random(600, 1500), 20); 
+        lastPanicSound = millis();
     }
+
+    // ৪. কিউট ঘামের ফোঁটা (Sweat Drop Animation)
+    static float sweatY = 10;
+    if ((millis() / 700) % 2 == 0) {
+        display.fillCircle(cornerX - 8, (int)sweatY, 3, WHITE); // ঘামের ফোঁটা একটু বড় করা হয়েছে
+        display.drawLine(cornerX - 8, (int)sweatY - 4, cornerX - 8, (int)sweatY - 8, WHITE);
+        sweatY += 2.0; // ঘাম দ্রুত নিচে নামবে
+        if (sweatY > 55) sweatY = 10; 
+    }
+
+    // ৫. "SCARED!" টেক্সট মুছে ফেলা হয়েছে (এই অংশটি খালি)
 
     display.display();
 }
+
 
 
 void expressionDizzy() {
@@ -814,30 +745,51 @@ void expressionDizzy() {
 
 
 void expressionSleepy() {
-    display.fillRoundRect(25, 40, 30, 8, 4, WHITE);
-    display.fillRoundRect(73, 40, 30, 8, 4, WHITE);
-    int zPos = (millis() / 700) % 3;
+    display.clearDisplay(); // স্ক্রিন একদম পরিষ্কার রাখবে, কোনো X থাকবে না
+
+    // ১. বন্ধ চোখ (নিচের দিকে শান্তভাবে বন্ধ)
+    display.fillRoundRect(25, 40, 30, 6, 3, WHITE);
+    display.fillRoundRect(73, 40, 30, 6, 3, WHITE);
+
+    // ২. "Z Z Z" এনিমেশন লজিক
+    int zPos = (millis() / 800) % 3;
     display.setTextSize(1);
-    if(zPos >= 0) {
-        display.setCursor(100, 15);
-        display.print("z");
+    display.setTextColor(WHITE);
+    
+    if(zPos >= 0) { display.setCursor(100, 20); display.print("z"); }
+    if(zPos >= 1) { display.setCursor(110, 12); display.print("Z"); }
+    if(zPos >= 2) { display.setCursor(120, 4);  display.print("z"); }
+
+    // ৩. বাস্তবসম্মত স্নোরিং ইফেক্ট (Gap সহ)
+    // লুপটি এখন ৪ সেকেন্ডের (৪০০০ মিলি-সেকেন্ড)
+    unsigned long sleepMillis = millis() % 4000; 
+    
+    if (sleepMillis < 1200) { 
+        // ১.২ সেকেন্ড ধরে নাক ডাকার শব্দ (ইনহেল/নাক ডাকা)
+        int freq = 150 + (sleepMillis / 12); 
+        tone(3, freq, 30); 
+    } 
+    else if (sleepMillis >= 1200 && sleepMillis < 2200) {
+        // ১ সেকেন্ড বিরতি (শ্বাস ছাড়ার সময় বা গ্যাপ)
+        noTone(3);
     }
-    if(zPos >= 1) {
-        display.setCursor(110, 10);
-        display.print("z");
+    else if (sleepMillis >= 2200 && sleepMillis < 3000) {
+        // পরবর্তী ছোট একটি দীর্ঘশ্বাস (এক্সহেল)
+        int freq = 200 - ((sleepMillis - 2200) / 15);
+        if (freq > 50) tone(3, freq, 20);
     }
-    if(zPos >= 2) {
-        display.setCursor(118, 5);
-        display.print("z");
+    else {
+        // লুপের বাকি সময় একদম শান্ত
+        noTone(3);
     }
+
+    // ৪. ছোট্ট কিউট হাসি (মাঝখানে কোনো X থাকবে না)
+    display.drawCircleHelper(64, 48, 5, 2, WHITE);
+    display.drawCircleHelper(70, 48, 5, 1, WHITE);
+
+    display.display();
 }
 
-void expressionSuperAngry() {
-    display.drawLine(20, 15, 55, 30, WHITE);
-    display.drawLine(108, 15, 73, 30, WHITE);
-    drawEye(25, 25, 30, 20, 5);
-    drawEye(73, 25, 30, 20, 5);
-}
 
 void drawEye(int x, int y, int w, int h, int r) {
     if (isBlinking) {
@@ -859,33 +811,90 @@ void expressionNormal() {
     drawEye(73, 20, 30, 30, 8);
 }
 
+void expressionSuperAngry() {
+    display.clearDisplay();
+
+    // ১. রাগের কারণে পুরো স্ক্রিন বা চোখ কাঁপানো (Shake effect)
+    int shake = (millis() % 50 > 25) ? 2 : -2;
+
+    // ২. ভয়ংকর রাগী ভ্রু (V-Shape)
+    display.drawLine(20 + shake, 15, 50 + shake, 30, WHITE); // বাম ভ্রু
+    display.drawLine(108 + shake, 15, 78 + shake, 30, WHITE); // ডান ভ্রু
+
+    // ৩. রাগী চোখ (তীর্যক বা নিচের দিকে ভরাট)
+    // বাম চোখ
+    display.fillRoundRect(25 + shake, 32, 30, 15, 4, WHITE);
+    display.fillCircle(40 + shake, 40, 4, BLACK); // মণি
+
+    // ডান চোখ
+    display.fillRoundRect(73 + shake, 32, 30, 15, 4, WHITE);
+    display.fillCircle(88 + shake, 40, 4, BLACK);
+
+    // ৪. রাগী মুখ (নিচের দিকে বাঁকানো বড় মুখ)
+    display.drawCircleHelper(64 + shake, 65, 15, 1, WHITE);
+    display.drawCircleHelper(64 + shake, 65, 15, 2, WHITE);
+    
+    // ৫. ৩ নম্বর পিনে রাগী সাইরেন বা কর্কশ শব্দ
+    if (millis() % 200 < 100) {
+        tone(3, random(100, 300), 50); // লো-ফ্রিকোয়েন্সি কর্কশ শব্দ
+    } else {
+        noTone(3);
+    }
+
+    display.display();
+}
+
+
 void expressionSad() {
     display.clearDisplay();
 
-    // ১. দুঃখিত ভ্রু (Sad Eyebrows) - যা কিউটনেস বাড়াবে
-    display.drawLine(25, 15, 45, 22, WHITE); // বাম ভ্রু
-    display.drawLine(103, 15, 83, 22, WHITE); // ডান ভ্রু
+    // ১. কিউট স্যাড ভ্রু (অল্প বাঁকানো, ভয়ংকর নয়)
+    display.drawCircleHelper(40, 20, 12, 1, WHITE); // বাম ভ্রু
+    display.drawCircleHelper(88, 20, 12, 2, WHITE); // ডান ভ্রু
 
-    // ২. চোখ (মণি নিচের দিকে নামানো)
-    // আপনার আগের স্থানাঙ্ক অনুযায়ী
-    display.fillRoundRect(25, 25, 30, 25, 8, WHITE); // বাম চোখ
-    display.fillRoundRect(73, 25, 30, 25, 8, WHITE); // ডান চোখ
+    // ২. প্রফেশনাল কিউট চোখ (একটু লম্বাটে এবং ভরাট)
+    // বাম চোখ
+    display.fillRoundRect(25, 25, 30, 28, 10, WHITE); 
+    // ডান চোখ
+    display.fillRoundRect(73, 25, 30, 28, 10, WHITE); 
 
-    // মণি (নিচের দিকে তাকিয়ে থাকা)
-    display.fillCircle(40, 42, 4, BLACK);
-    display.fillCircle(88, 42, 4, BLACK);
+    // ৩. বড় মণি (নিচের দিকে তাকিয়ে থাকা, কিন্তু কিউট)
+    int eyeLookY = 40 + (int)(sin(millis() * 0.002) * 2); // হালকা নড়াচড়া করবে
+    display.fillCircle(40, eyeLookY, 6, BLACK);
+    display.fillCircle(88, eyeLookY, 6, BLACK);
+    
+    // মণির ভেতরে ছোট সাদা বিন্দু (Sparkle) - এটি কিউটনেস বহুগুণ বাড়িয়ে দেয়
+    display.fillCircle(42, eyeLookY - 2, 2, WHITE);
+    display.fillCircle(90, eyeLookY - 2, 2, WHITE);
 
-    // ৩. চোখের জল (Tear Drop) - এটি প্রফেশনাল লুক দেবে
-    static int tearY = 45;
-    display.fillTriangle(30, tearY, 34, tearY, 32, tearY - 4, WHITE);
-    display.fillCircle(32, tearY + 2, 2, WHITE);
+    // ৪. প্রফেশনাল চোখের জল (Tear Drop Animation)
+    static float tearY = 40;
+    static bool tearLeft = true; 
+    
+    if (tearLeft) {
+        display.fillCircle(30, (int)tearY, 2, WHITE); // বাম চোখের জল
+        display.fillTriangle(28, (int)tearY, 32, (int)tearY, 30, (int)tearY - 4, WHITE);
+    } else {
+        display.fillCircle(98, (int)tearY, 2, WHITE); // ডান চোখের জল
+        display.fillTriangle(96, (int)tearY, 100, (int)tearY, 98, (int)tearY - 4, WHITE);
+    }
 
-    tearY++; // চোখের জল নিচে পড়বে
-    if (tearY > 60) tearY = 45;
+    tearY += 0.5; // খুব স্মুথলি জল পড়বে
+    if (tearY > 58) {
+        tearY = 40;
+        tearLeft = !tearLeft; // একবার বাম চোখে, একবার ডান চোখে জল পড়বে
+    }
 
-    // ৪. মুখ (উল্টো বাঁকানো ছোট মুখ)
-    display.drawCircleHelper(64, 62, 10, 1, WHITE);
-    display.drawCircleHelper(64, 62, 10, 2, WHITE);
+    // ৫. ছোট কিউট মুখ (উল্টো বাঁকানো)
+    display.drawCircleHelper(64, 60, 6, 1, WHITE);
+    display.drawCircleHelper(64, 60, 6, 2, WHITE);
+
+    // ৬. ৩ নম্বর পিনে হালকা কান্নার শব্দ (Whimpering Sound)
+    if ((int)tearY % 10 == 0) {
+        tone(3, 400 + (int)(tearY * 2), 10);
+    } else {
+        noTone(3);
+    }
 
     display.display();
 }
@@ -894,36 +903,45 @@ void expressionSad() {
 void expressionLove() {
     display.clearDisplay();
 
-    // ১. স্মুথ পালসিং ক্যালকুলেশন (sine wave ব্যবহার করে)
-    // এটি হার্টের স্পন্দনকে খুব স্মুথ এবং প্রফেশনাল করে তুলবে
-    float pulse = sin(millis() * 0.005) * 3;
+    // ১. হার্টবিট বা পালসিং লজিক (Smooth Sine Wave)
+    float pulse = sin(millis() * 0.006) * 2.5;
     int s = (int)pulse;
 
-    // ২. বাম পাশের হার্ট (বাম চোখ)
-    display.fillCircle(32, 28, 8 + s, WHITE);
-    display.fillCircle(48, 28, 8 + s, WHITE);
-    display.fillTriangle(24 - s, 32, 56 + s, 32, 40, 52 + s, WHITE);
+    // ২. প্রফেশনাল চোখ (বড় এবং কিউট)
+    // বাম চোখ
+    display.fillRoundRect(25, 20, 32, 32, 10, WHITE);
+    // ডান চোখ
+    display.fillRoundRect(71, 20, 32, 32, 10, WHITE);
 
-    // ৩. ডান পাশের হার্ট (ডান চোখ)
-    display.fillCircle(80, 28, 8 + s, WHITE);
-    display.fillCircle(96, 28, 8 + s, WHITE);
-    display.fillTriangle(72 - s, 32, 104 + s, 32, 88, 52 + s, WHITE);
+    // ৩. চোখের মণি হিসেবে হার্ট (কালো রঙের হার্ট চোখের ভেতর)
+    // বাম চোখের হার্ট
+    int lx = 41, ly = 32; // বাম মণির সেন্টার
+    display.fillCircle(lx - 4, ly - 2, 4 + s/2, BLACK);
+    display.fillCircle(lx + 4, ly - 2, 4 + s/2, BLACK);
+    display.fillTriangle(lx - 8 - s/2, ly, lx + 8 + s/2, ly, lx, ly + 10 + s, BLACK);
 
-    // ৪. ফ্লোটিং হার্ট এনিমেশন (ছোট ছোট হার্ট উপরে উড়ে যাবে)
-    static int heartY = 20;
-    static int heartX = 64;
-    display.drawPixel(heartX, heartY, WHITE);
-    display.drawPixel(heartX-1, heartY-1, WHITE);
-    display.drawPixel(heartX+1, heartY-1, WHITE);
+    // ডান চোখের হার্ট
+    int rx = 87, ry = 32; // ডান মণির সেন্টার
+    display.fillCircle(rx - 4, ry - 2, 4 + s/2, BLACK);
+    display.fillCircle(rx + 4, ry - 2, 4 + s/2, BLACK);
+    display.fillTriangle(rx - 8 - s/2, ry, rx + 8 + s/2, ry, rx, ry + 10 + s, BLACK);
 
-    heartY--; // হার্ট উপরে উঠবে
-    if (heartY < 0) {
-        heartY = 30;
-        heartX = random(40, 90);
+    // ৪. কিউট ব্লাশ (গালের লাল আভা বা ডট এনিমেশন)
+    if ((millis() / 500) % 2 == 0) {
+        display.drawPixel(20, 45, WHITE); display.drawPixel(22, 47, WHITE);
+        display.drawPixel(106, 45, WHITE); display.drawPixel(104, 47, WHITE);
     }
 
-    // ৫. কিউট স্মাইল
-    display.drawCircleHelper(64, 48, 8, 2, WHITE);
+    // ৫. প্রফেশনাল কিউট মুখ (স্মাইল)
+    display.drawCircleHelper(64, 45, 7, 2, WHITE);
+    display.drawCircleHelper(70, 45, 7, 1, WHITE);
+
+    // ৬. ৩ নম্বর পিনে কিউট "লিটল হার্ট" সাউন্ড (পপিং সাউন্ড)
+    if (abs(s) > 2) { 
+        tone(3, 1200 + (s * 20), 10); // হার্ট যখন বড় হবে তখন শব্দ হবে
+    } else {
+        noTone(3);
+    }
 
     display.display();
 }
@@ -947,14 +965,45 @@ void showWeatherPage() {
 }
 
 void showTimePage() {
-    display.setTextSize(1);
-    display.setCursor(45, 5);
-    display.print("TIME");
-    display.drawLine(0, 15, 128, 15, WHITE);
+    display.clearDisplay(); 
+
+    // ১. সময় দেখানো (HH:MM)
     display.setTextSize(3);
-    display.setCursor(20, 30);
+    display.setCursor(20, 15);
     display.print(timeClient.getFormattedTime().substring(0, 5));
+
+    // ২. বর্তমান বার (Day of the week) বের করা
+    String days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    String currentDay = days[timeClient.getDay()]; 
+
+    // ৩. তারিখ এবং মাস বের করার বিকল্প পদ্ধতি (Epoch Time থেকে)
+    time_t rawtime = timeClient.getEpochTime();
+    struct tm * ti;
+    ti = localtime (&rawtime);
+
+    // তারিখ এবং মাসের ভ্যারিয়েবল
+    int day = ti->tm_mday;
+    int month = ti->tm_mon + 1; // tm_mon ০ থেকে শুরু হয় (জানুয়ারি = ০)
+
+    // ৪. ডিসপ্লেতে বার এবং তারিখ/মাস দেখানো
+    display.setTextSize(1);
+    display.drawLine(10, 42, 118, 42, WHITE); // স্টাইলিশ ডিভাইডার
+
+    // বার (বামে)
+    display.setCursor(15, 50);
+    display.print(currentDay); 
+    
+    // তারিখ/মাস (ডানে)
+    display.setCursor(80, 50);
+    if(day < 10) display.print("0"); // ০ যোগ করা (সুন্দর দেখানোর জন্য)
+    display.print(day);
+    display.print("/");
+    if(month < 10) display.print("0");
+    display.print(month);
+
+    display.display();
 }
+
 
 void drawLoading() {
     display.clearDisplay();
@@ -966,7 +1015,6 @@ void drawLoading() {
 void drawAutoExpressions() {
     expressionNormal();
 }
-
 
 // এটি কোডের একদম শেষে অন্য ফ���ংশনগুলোর সাথে থাকবে
 void detectGesture() {
@@ -997,34 +1045,29 @@ void detectGesture() {
 void expressionVebchi() {
     display.clearDisplay();
 
-    // ১. চোখ (একটু Narrow এবং দুষ্টু চাহনি)
-    display.fillRoundRect(25, 25, 30, 20, 5, WHITE); // বাম চোখ
-    display.fillRoundRect(73, 25, 30, 20, 5, WHITE); // ডান চোখ
+    // ১. কান/এন্টেনা (চঞ্চল লুক)
+    display.fillTriangle(20, 10, 35, 20, 10, 25, WHITE); 
+    display.fillTriangle(108, 10, 93, 20, 118, 25, WHITE); 
 
-    // মণি (মাঝখানে, একটু বড়)
+    // ২. চোখ ও ভ্রু
+    display.fillRoundRect(25, 25, 30, 20, 5, WHITE); 
+    display.fillRoundRect(73, 25, 30, 20, 5, WHITE); 
     display.fillCircle(40, 35, 4, BLACK);
     display.fillCircle(88, 35, 4, BLACK);
+    display.drawLine(25, 18, 45, 25, WHITE); 
+    display.drawLine(103, 18, 83, 25, WHITE); 
 
-    // ২. ভ্রু (দুষ্টু লুক দেওয়ার জন্য)
-    display.drawLine(25, 18, 45, 25, WHITE); // বাম ভ্রু
-    display.drawLine(103, 18, 83, 25, WHITE); // ডান ভ্রু
+    // ৩. জিবের এনিমেশন ও সাউন্ড (৩ নম্বর পিন)
+    float wave = sin(millis() * 0.02);
+    int tongueH = 15 + (int)(abs(wave) * 5); 
+    display.fillRoundRect(56, 52, 16, tongueH, 8, WHITE); 
+    display.drawLine(64, 54, 64, 50 + tongueH, BLACK);
 
-    // ৩. জিব মিলিয়ে মুখ (Poking Tongue)
-    display.drawCircleHelper(64, 52, 6, 2, WHITE); // উপরের ঠোঁট
-
-    static float tongueY = 54; // জিবের নড়াচড়া
-    tongueY = 54 + sin(millis() * 0.008) * 3;
-
-    // লম্বা জিব (Tongue shape)
-    display.fillRoundRect(56, 54, 16, (int)(72 - tongueY), 6, WHITE);
-    display.drawLine(64, 56, 64, (int)(68 - tongueY), BLACK); // জিবের মাঝের লাইন
-
-    // ৪. দুষ্টু অভিব্যক্তি (Naughty lines)
-    if ((millis() / 500) % 2 == 0) {
-        display.setCursor(110, 40);
-        display.print("Nya!");
-        display.setCursor(5, 40);
-        display.print("Nya!");
+    // বাজার সাউন্ড (জিব নড়লে শব্দ হবে)
+    if (abs(wave) > 0.3) {
+        tone(3, 1200 + (int)(abs(wave) * 500), 20);
+    } else {
+        noTone(3);
     }
 
     display.display();
@@ -1032,17 +1075,107 @@ void expressionVebchi() {
 
 void expressionRelax() {
     display.clearDisplay();
-    // শান্ত চোখ (নিচের দিকে বাঁকানো)
-    display.drawCircleHelper(40, 40, 15, 1, WHITE); // বাম চোখ
-    display.drawCircleHelper(88, 40, 15, 1, WHITE); // ডান চোখ
-    // ছোট হাসিমুখ
-    display.drawCircleHelper(64, 48, 8, 2, WHITE);
 
-    if ((millis() / 1000) % 2 == 0) {
-        display.setCursor(100, 20);
-        display.print("~");
-        display.setCursor(20, 20);
-        display.print("~");
+    // ১. প্রফেশনাল রিলাক্স চোখ (অর্ধেক বন্ধ এবং কিউট শেপ)
+    // বাম চোখ
+    display.fillRoundRect(25, 30, 30, 15, 8, WHITE); // চোখের ওপরের অংশ
+    display.fillCircle(40, 45, 4, BLACK);           // নিচের দিকে মণি
+
+    // ডান চোখ
+    display.fillRoundRect(73, 30, 30, 15, 8, WHITE);
+    display.fillCircle(88, 45, 4, BLACK);
+
+    // ২. প্রশান্তির ভ্রু (একটু উপরে উঠানো)
+    display.drawCircleHelper(40, 25, 10, 1, WHITE); 
+    display.drawCircleHelper(88, 25, 10, 2, WHITE); 
+
+    // ৩. শ্বাস নেওয়ার মতো এনিমেশন ( Breathing / Pulsing )
+    // এটি করলে মনে হবে রোবটটি জ্যান্ত এবং নিঃশ্বাস নিচ্ছে
+    int breatheShift = (int)(sin(millis() * 0.003) * 3);
+    
+    // ৪. ছোট্ট কিউট হাসিমুখ (যা নিঃশ্বাসের সাথে হালকা নড়বে)
+    display.drawCircleHelper(64, 52 + breatheShift, 6, 2, WHITE); 
+    display.drawCircleHelper(70, 52 + breatheShift, 6, 1, WHITE); 
+
+    // ৫. আরামদায়ক শব্দ (Purring Sound - ৩ নম্বর পিন)
+    // এটি একদম কম ফ্রিকোয়েন্সির শব্দ হবে যা শুনতে ভালো লাগে
+    if (millis() % 2000 < 1000) { // ২ সেকেন্ড অন্তর অন্তর হালকা গুঞ্জন
+        int purrFreq = 150 + (int)(sin(millis() * 0.01) * 50);
+        tone(3, purrFreq, 15);
+    } else {
+        noTone(3);
     }
+
+    // ৬. চারপাশের শান্ত পরিবেশের চিহ্ন (Floating '~' or Music note)
+    if ((millis() / 800) % 2 == 0) {
+        display.setCursor(110, 15 + breatheShift); display.print("~");
+        display.setCursor(10, 25 - breatheShift); display.print("~");
+    }
+
     display.display();
 }
+
+
+void expressionPhysicsBall() {
+    display.clearDisplay();
+
+    // ১. সেন্সর ডাটা আপডেট
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
+
+    // রোবটটি কোন দিকে নাড়ানো হচ্ছে তা মাপার জন্য (Y অক্ষ ব্যবহার করছি)
+    float moveForce = a.acceleration.y;
+
+    // ২. ফিজিক্স ভ্যারিয়েবল (static রাখা হয়েছে যেন লুপের বাইরেও ডাটা মনে থাকে)
+    static float ballY = 32.0;    
+    static float velocity = 0.0;   
+    const float gravity = 0.9;     // অভিকর্ষজ টান (বল নিচে পড়ার জন্য)
+    const float bounce = -0.75;    // ড্রপ খাওয়ার শক্তি (বউন্স)
+    const int topLimit = 22;       // চোখের বক্সের উপরের সীমা
+    const int bottomLimit = 52;    // চোখের বক্সের নিচের সীমা
+
+    // ৩. ঝাঁকুনি শনাক্ত করা (Shake Detection)
+    // ঝাঁকুনি দিলে বলের বেগে নতুন গতি যোগ হবে
+    if (abs(moveForce) > 16.0) {   
+        velocity += (moveForce * 0.8); // ঝাঁকুনির জোর অনুযায়ী বেগে পরিবর্তন
+    }
+
+    // ৪. গতির আপডেট (Physics Logic)
+    velocity += gravity;           // মাধ্যাকর্ষণ যোগ হচ্ছে
+    ballY += velocity;             // সেই অনুযায়ী মণি পজিশন পরিবর্তন করছে
+
+    // ৫. কলাইশন বা বর্ডারে বাড়ি খাওয়া (Collision Detection)
+    // নিচে বাড়ি খেলে ড্রপ খাবে
+    if (ballY >= bottomLimit) {
+        ballY = bottomLimit;
+        velocity *= bounce;        // গতি উল্টে গিয়ে ড্রপ খাবে
+        
+        // বাড়ি খাওয়ার শব্দ (৩ নম্বর পিন)
+        if (abs(velocity) > 2.0) {
+            tone(3, 900 + (int)abs(velocity * 10), 15);
+        }
+    }
+    // উপরে বাড়ি খেলেও ড্রপ খাবে
+    else if (ballY <= topLimit) {
+        ballY = topLimit;
+        velocity *= bounce;
+    }
+
+    // ৬. ড্রইং - চোখের ফ্রেম (বক্স)
+    display.drawRoundRect(20, 18, 36, 38, 8, WHITE); // বাম বক্স
+    display.drawRoundRect(72, 18, 36, 38, 8, WHITE); // ডান বক্স
+
+    // ৭. ড্রইং - মণি (মার্বেল বলের মতো ড্রপ খাচ্ছে)
+    int finalY = (int)ballY;
+    
+    // বাম মণি
+    display.fillCircle(38, finalY, 7, WHITE);
+    display.fillCircle(38, finalY, 2, BLACK); // মণির গভীরতা
+
+    // ডান মণি
+    display.fillCircle(90, finalY, 7, WHITE);
+    display.fillCircle(90, finalY, 2, BLACK);
+
+    display.display();
+}
+    
